@@ -77,11 +77,49 @@
 
     h1.hero-title .accent { color: var(--accent); }
 
+    /* ── Free badge ── */
+    .free-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--accent);
+      color: #000;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.15rem;
+      letter-spacing: 0.18em;
+      padding: 8px 18px;
+      border-radius: 999px;
+      margin-bottom: 18px;
+      box-shadow: 0 0 0 4px rgba(214,255,63,0.18), 0 4px 16px rgba(214,255,63,0.25);
+      animation: free-pulse 2.4s ease-in-out infinite;
+    }
+
+    .free-badge .dot {
+      width: 8px;
+      height: 8px;
+      background: #000;
+      border-radius: 50%;
+    }
+
+    @keyframes free-pulse {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(214,255,63,0.18), 0 4px 16px rgba(214,255,63,0.25); }
+      50%      { box-shadow: 0 0 0 8px rgba(214,255,63,0.10), 0 6px 22px rgba(214,255,63,0.40); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .free-badge { animation: none; }
+    }
+
     .hero-sub {
       max-width: 620px;
       margin: 0 auto 28px;
       color: var(--muted);
       font-size: 1.05rem;
+    }
+
+    .hero-sub .free-text {
+      color: var(--accent);
+      font-weight: 700;
     }
 
     .event-meta {
@@ -514,7 +552,8 @@
   <section class="hero">
     <span class="eyebrow">KODA CROSSFIT IRON VIEW</span>
     <h1 class="hero-title">HYROX <span class="accent">SIMULATION</span></h1>
-    <p class="hero-sub">Race-day conditions. Real format. Cookout to follow.</p>
+    <div class="free-badge"><span class="dot"></span>FREE EVENT<span class="dot"></span></div>
+    <p class="hero-sub"><span class="free-text">100% free to enter</span> — race-day conditions, real format, cookout to follow.</p>
 
     <div class="event-meta">
       <div class="meta-item">
@@ -536,7 +575,7 @@
   <!-- ═══ FORM ═══ -->
   <main class="container">
     <div class="info-card" id="infoCard">
-      <strong>Spots are limited</strong> — register early to lock in your division. Choose Singles, Doubles, or a 4-person Relay, plus your weight category (Pro, Open, or Scaled).
+      <strong>Free to enter &middot; Spots are limited</strong> — no registration fee, just sign up below to lock in your division. Choose Singles, Doubles, or a 4-person Relay, plus your weight category (Pro, Open, or Scaled).
     </div>
 
     <form id="signupForm" novalidate>
