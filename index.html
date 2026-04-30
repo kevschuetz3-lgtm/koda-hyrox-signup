@@ -409,6 +409,70 @@
 
     .sponsor-note strong { color: var(--text); }
 
+    /* ── Sponsor section ── */
+    .sponsor-section {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 20px 24px;
+      text-align: center;
+    }
+
+    .sponsor-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.25em;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .sponsor-card {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      background: #fafafa;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 36px 24px;
+      text-decoration: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    .sponsor-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+      box-shadow: 0 6px 24px rgba(214,255,63,0.15);
+    }
+
+    .sponsor-card img {
+      max-width: 260px;
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .sponsor-card .visit-link {
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #555;
+      font-weight: 600;
+    }
+
+    .sponsor-card:hover .visit-link {
+      color: #000;
+    }
+
+    .sponsor-tagline {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
     /* ── Loading ── */
     .loading {
       display: none;
@@ -466,7 +530,7 @@
         740 S Pierce Ave, Louisville, CO
       </div>
     </div>
-    <p class="sponsor-note">Cookout at 1 PM sponsored by <strong>Pasture Provisions</strong></p>
+    <p class="sponsor-note">Cookout at 1 PM &middot; Sponsored by <strong>Pasture Provisions</strong></p>
   </section>
 
   <!-- ═══ FORM ═══ -->
@@ -590,6 +654,16 @@
       <button class="submit-another-btn" onclick="resetForm()">Register another athlete</button>
     </div>
   </main>
+
+  <!-- ═══ SPONSOR ═══ -->
+  <section class="sponsor-section">
+    <div class="sponsor-label">COOKOUT SPONSORED BY</div>
+    <a class="sponsor-card" href="https://pastureprovisionsco.com/" target="_blank" rel="noopener">
+      <img src="https://pastureprovisionsco.com/cdn/shop/files/PP-Primary-Logo-Black-Web.png?width=520" alt="Pasture Provisions Co" loading="lazy">
+      <span class="visit-link">Visit pastureprovisionsco.com →</span>
+    </a>
+    <p class="sponsor-tagline">100% Colorado-raised, grass-fed beef &amp; lamb, heritage pork, and pasture-raised chicken — delivered farm-to-table.</p>
+  </section>
 
   <footer>
     Koda CrossFit Iron View &middot; 740 S Pierce Ave, Louisville, CO 80027<br>
