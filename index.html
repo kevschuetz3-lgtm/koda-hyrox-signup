@@ -818,6 +818,12 @@
         <p class="weights-ref-caption">Reference: weights for each station by division</p>
       </div>
 
+      <div class="form-section-title">Home Gym</div>
+      <div class="field">
+        <label for="homeGym">What gym do you train at? <span class="req">*</span></label>
+        <input type="text" id="homeGym" name="homeGym" required autocomplete="organization" placeholder="e.g. Koda CrossFit Iron View">
+      </div>
+
       <div class="form-section-title">Anything Else?</div>
       <div class="field">
         <label for="comments">Comments or Questions</label>
@@ -908,6 +914,7 @@
         email: document.getElementById('email').value.trim(),
         division: (document.querySelector('input[name="division"]:checked') || {}).value || '',
         weights: (document.querySelector('input[name="weights"]:checked') || {}).value || '',
+        homeGym: document.getElementById('homeGym').value.trim(),
         comments: document.getElementById('comments').value.trim(),
         partnerName: '',
         teammates: ''
@@ -918,6 +925,7 @@
       if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return showError('Please enter a valid email address.');
       if (!data.division) return showError('Please choose a division.');
       if (!data.weights) return showError('Please choose a weight category.');
+      if (!data.homeGym) return showError('Please tell us what gym you train at.');
 
       // Conditional validation
       if (data.division === 'Doubles') {
@@ -980,6 +988,7 @@
       ];
       if (data.partnerName) rows.push(['Partner', data.partnerName]);
       if (data.teammates) rows.push(['Teammates', data.teammates]);
+      if (data.homeGym) rows.push(['Home Gym', data.homeGym]);
       details.innerHTML = rows.map(function(r) {
         return '<div class="row"><span class="label-k">' + r[0] + '</span><span>' + escapeHtml(r[1]) + '</span></div>';
       }).join('');
