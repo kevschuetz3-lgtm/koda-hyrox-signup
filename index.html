@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hyrox Simulation — Koda CrossFit Iron View</title>
   <meta name="description" content="Sign up for the Hyrox Simulation event at Koda CrossFit Iron View on June 7, 2026. Cookout to follow, sponsored by Pasture Provisions.">
+  <link rel="icon" type="image/png" href="assets/koda-mark.png">
+  <link rel="apple-touch-icon" href="assets/koda-mark.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -51,6 +53,15 @@
       background-image:
         repeating-linear-gradient(45deg, rgba(214,255,63,0.03) 0 2px, transparent 2px 18px);
       pointer-events: none;
+    }
+
+    .koda-mark {
+      display: block;
+      width: 78px;
+      height: auto;
+      margin: 0 auto 22px;
+      /* The PNG is dark navy on transparent — invert to white for the dark hero */
+      filter: brightness(0) invert(1);
     }
 
     .eyebrow {
@@ -306,6 +317,29 @@
 
     .conditional .field:last-child { margin-bottom: 0; }
 
+    /* ── Weights reference graphic ── */
+    .weights-ref {
+      margin-top: 14px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #000;
+    }
+
+    .weights-ref img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .weights-ref-caption {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 8px;
+      letter-spacing: 0.04em;
+    }
+
     /* ── Submit ── */
     .submit-btn {
       display: block;
@@ -550,6 +584,7 @@
 
   <!-- ═══ HERO ═══ -->
   <section class="hero">
+    <img class="koda-mark" src="assets/koda-mark.png" alt="Koda">
     <span class="eyebrow">KODA CROSSFIT IRON VIEW</span>
     <h1 class="hero-title">HYROX <span class="accent">SIMULATION</span></h1>
     <div class="free-badge"><span class="dot"></span>FREE EVENT<span class="dot"></span></div>
@@ -673,6 +708,10 @@
             </div>
           </label>
         </div>
+        <figure class="weights-ref">
+          <img src="assets/hyrox-sim-weights.jpeg" alt="Hyrox Sim weight options for Scaled, Open, and Pro divisions across Sled Push, Sled Pull, Farmers Carry, Sandbag Lunges, and Wall Balls" loading="lazy">
+        </figure>
+        <p class="weights-ref-caption">Reference: weights for each station by division</p>
       </div>
 
       <div class="form-section-title">Anything Else?</div>
