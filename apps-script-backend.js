@@ -53,10 +53,11 @@ function getOrCreateSpreadsheet() {
     "Division",
     "Partner / Teammates",
     "Weights",
+    "Expected Time",
     "Home Gym",
     "Comments"
   ]);
-  sheet.getRange(1, 1, 1, 9)
+  sheet.getRange(1, 1, 1, 10)
     .setFontWeight("bold")
     .setBackground("#0a0a0a")
     .setFontColor("#d6ff3f");
@@ -68,8 +69,9 @@ function getOrCreateSpreadsheet() {
   sheet.setColumnWidth(5, 130);
   sheet.setColumnWidth(6, 280);
   sheet.setColumnWidth(7, 100);
-  sheet.setColumnWidth(8, 200);
-  sheet.setColumnWidth(9, 320);
+  sheet.setColumnWidth(8, 150);
+  sheet.setColumnWidth(9, 200);
+  sheet.setColumnWidth(10, 320);
 
   return ss;
 }
@@ -95,6 +97,7 @@ function doPost(e) {
       data.division || "",
       partnersCol,
       data.weights || "",
+      data.expectedTime || "",
       data.homeGym || "",
       data.comments || ""
     ]);
@@ -112,6 +115,7 @@ function doPost(e) {
             row("Division", data.division || "") +
             (partnersCol ? row(data.teammates ? "Teammates" : "Partner", partnersCol) : "") +
             row("Weights", data.weights || "") +
+            row("Expected Time", data.expectedTime || "") +
             row("Home Gym", data.homeGym || "") +
             (data.comments ? row("Comments", data.comments) : "") +
             "</table>" +
