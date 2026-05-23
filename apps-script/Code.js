@@ -47,6 +47,7 @@ function getOrCreateSpreadsheet() {
 
   sheet.appendRow([
     "Timestamp",
+    "Waitlist?",
     "First Name",
     "Last Name",
     "Email",
@@ -57,23 +58,37 @@ function getOrCreateSpreadsheet() {
     "Home Gym",
     "Comments"
   ]);
-  sheet.getRange(1, 1, 1, 10)
+  sheet.getRange(1, 1, 1, 11)
     .setFontWeight("bold")
     .setBackground("#0a0a0a")
     .setFontColor("#d6ff3f");
   sheet.setFrozenRows(1);
   sheet.setColumnWidth(1, 170);
-  sheet.setColumnWidth(2, 120);
+  sheet.setColumnWidth(2, 90);
   sheet.setColumnWidth(3, 120);
-  sheet.setColumnWidth(4, 220);
-  sheet.setColumnWidth(5, 130);
-  sheet.setColumnWidth(6, 280);
-  sheet.setColumnWidth(7, 100);
-  sheet.setColumnWidth(8, 150);
-  sheet.setColumnWidth(9, 200);
-  sheet.setColumnWidth(10, 320);
+  sheet.setColumnWidth(4, 120);
+  sheet.setColumnWidth(5, 220);
+  sheet.setColumnWidth(6, 130);
+  sheet.setColumnWidth(7, 280);
+  sheet.setColumnWidth(8, 100);
+  sheet.setColumnWidth(9, 150);
+  sheet.setColumnWidth(10, 200);
+  sheet.setColumnWidth(11, 320);
 
   return ss;
+}
+
+// Ensure the sheet has the "Waitlist?" column (for sheets created before this column existed).
+function ensureWaitlistColumn(sheet) {
+  var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (header.indexOf("Waitlist?") !== -1) return;
+  // Insert "Waitlist?" as column B (after Timestamp).
+  sheet.insertColumnBefore(2);
+  sheet.getRange(1, 2).setValue("Waitlist?")
+    .setFontWeight("bold")
+    .setBackground("#0a0a0a")
+    .setFontColor("#d6ff3f");
+  sheet.setColumnWidth(2, 90);
 }
 
 // ── POST: Receive signup ──
@@ -85,12 +100,15 @@ function doPost(e) {
     var ss = getOrCreateSpreadsheet();
     PropertiesService.getScriptProperties().setProperty("SHEET_ID", ss.getId());
     var sheet = ss.getSheetByName("Signups");
+    ensureWaitlistColumn(sheet);
 
     // Combine partner / teammates into a single column for the sheet
     var partnersCol = data.partnerName || data.teammates || "";
+    var isWaitlist = data.waitlist === true || data.waitlist === "true";
 
     sheet.appendRow([
       new Date(),
+      isWaitlist ? "YES" : "",
       data.firstName || "",
       data.lastName || "",
       data.email || "",
@@ -102,13 +120,21 @@ function doPost(e) {
       data.comments || ""
     ]);
 
+    if (isWaitlist) {
+      // Highlight waitlist rows so they're easy to scan in the sheet.
+      var lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow, 1, 1, 11).setBackground("#fff8d6");
+    }
+
     if (NOTIFY_EMAIL) {
       try {
         MailApp.sendEmail({
           to: NOTIFY_EMAIL,
-          subject: "New Hyrox Simulation Signup — " + (data.firstName || "") + " " + (data.lastName || ""),
+          subject: (isWaitlist ? "[WAITLIST] " : "") + "New Hyrox Simulation Signup — " + (data.firstName || "") + " " + (data.lastName || ""),
           htmlBody:
-            "<h3>New signup for " + EVENT_NAME + "</h3>" +
+            (isWaitlist
+              ? "<h3 style='color:#a8cc1f'>WAITLIST signup for " + EVENT_NAME + "</h3><p style='font-size:13px;color:#666'>Sign-ups are frozen — this athlete added themselves to the waitlist.</p>"
+              : "<h3>New signup for " + EVENT_NAME + "</h3>") +
             "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
             row("Name", (data.firstName || "") + " " + (data.lastName || "")) +
             row("Email", data.email || "") +

@@ -176,6 +176,42 @@
 
     .info-card strong { color: var(--accent); }
 
+    /* ── Waitlist banner (top of page) ── */
+    .waitlist-banner {
+      background: var(--accent);
+      color: #0a0a0a;
+      text-align: center;
+      padding: 12px 20px;
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 0.08em;
+      font-size: 1rem;
+      border-bottom: 2px solid var(--accent-dark);
+    }
+    .waitlist-banner strong { font-weight: 700; }
+    .waitlist-banner .banner-sub {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      font-size: 0.85rem;
+      margin-top: 4px;
+      opacity: 0.85;
+    }
+
+    /* ── Waitlist note (under submit button) ── */
+    .waitlist-note {
+      margin-top: 14px;
+      padding: 14px 16px;
+      background: rgba(214,255,63,0.08);
+      border: 1px solid var(--accent-dark);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.9rem;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .waitlist-note strong { color: var(--accent); }
+
     /* ── Form ── */
     form {
       background: var(--panel);
@@ -696,6 +732,12 @@
 </head>
 <body>
 
+  <!-- ═══ WAITLIST BANNER ═══ -->
+  <div class="waitlist-banner">
+    <strong>SIGN-UPS FROZEN — WAITLIST ONLY</strong>
+    <span class="banner-sub">Due to popularity, sign-ups are temporarily closed. We're working to see if we can accommodate more athletes.</span>
+  </div>
+
   <!-- ═══ HERO ═══ -->
   <section class="hero">
     <img class="koda-mark" src="assets/koda-mark.png" alt="Koda">
@@ -858,16 +900,20 @@
         <textarea id="comments" name="comments" placeholder="Optional — let us know if you have any questions or special requests."></textarea>
       </div>
 
-      <button type="submit" class="submit-btn" id="submitBtn">SECURE MY SPOT</button>
+      <button type="submit" class="submit-btn" id="submitBtn">ADD ME TO THE WAIT LIST</button>
+      <div class="waitlist-note">
+        <strong>Sign-ups are currently frozen.</strong><br>
+        Due to popularity and the amount of sign-ups, we've paused registration. We're working to see if we can accommodate more athletes — add yourself to the waitlist and we'll be in touch.
+      </div>
       <div class="form-error" id="formError"></div>
     </form>
 
     <div class="success-msg" id="successMsg">
       <div class="success-check">✓</div>
-      <h2>YOU'RE IN!</h2>
-      <p>We'll see you on race day. A confirmation has been logged.<br><br>We'll be reaching out with finalized heat times closer to the event.</p>
+      <h2>YOU'RE ON THE WAITLIST!</h2>
+      <p>We've got your info. Sign-ups are currently frozen, but we're working to see if we can accommodate more athletes.<br><br>If a spot opens up, we'll reach out by email — please keep an eye on your inbox.</p>
       <div class="success-details" id="successDetails"></div>
-      <button class="submit-another-btn" onclick="resetForm()">Register another athlete</button>
+      <button class="submit-another-btn" onclick="resetForm()">Add another athlete</button>
     </div>
   </main>
 
@@ -937,6 +983,7 @@
       clearError();
 
       var data = {
+        waitlist: true,
         firstName: document.getElementById('firstName').value.trim(),
         lastName: document.getElementById('lastName').value.trim(),
         email: document.getElementById('email').value.trim(),
@@ -1002,7 +1049,7 @@
       .catch(function(err) {
         loadingOverlay.classList.remove('active');
         submitBtn.disabled = false;
-        submitBtn.textContent = 'SECURE MY SPOT';
+        submitBtn.textContent = 'ADD ME TO THE WAIT LIST';
         showError('Something went wrong — please try again. (' + err.message + ')');
       });
     });
@@ -1041,7 +1088,7 @@
       doublesFields.classList.remove('show');
       teamFields.classList.remove('show');
       submitBtn.disabled = false;
-      submitBtn.textContent = 'SECURE MY SPOT';
+      submitBtn.textContent = 'ADD ME TO THE WAIT LIST';
       clearError();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
