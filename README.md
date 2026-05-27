@@ -68,12 +68,26 @@ The URL stays the same when you redeploy an existing deployment, so no need to u
 | First Name | required |
 | Last Name | required |
 | Email | required |
-| Division | Singles / Doubles / Team of 4 Relay |
-| Partner / Teammates | shown only for Doubles (1 name) or Team Relay (3 names) |
-| Weights | Pro / Open / Scaled |
+| Category | one of 14 specific categories (e.g. "Men Pro Singles", "Mixed Open Doubles", "Women's Open Relay") |
+| Partner / Teammates | shown only for Doubles (1 name) or Relay (3 names) |
+| Expected Time | required, used for heat placement |
+| Home Gym | required |
 | Comments | optional |
 
 Each submission also notifies `kevschuetz3@gmail.com` by email — change `NOTIFY_EMAIL` at the top of `apps-script-backend.js` to disable or redirect.
+
+## Shared-capacity groups
+
+Multiple categories share the same equipment / weight setup on the floor, so they draw from one pool of spots. Sign-ups in any category in a group decrement the count for all categories in that group.
+
+| Group | Capacity | Categories |
+|---|---|---|
+| A | 6 | Men Pro Singles · Men Pro Doubles |
+| B | 6 | Men Open Singles · Women Pro Singles · Men's Open Doubles · Mixed Open Doubles |
+| C | 4 | Women Open Singles · Men Scaled Singles · Men's Scaled Doubles · Women's Open Doubles · Women's Open Relay |
+| D | 6 | Women Scaled Singles · Mixed Scaled Doubles · Women's Scaled Doubles |
+
+Adjust capacities by editing the `GROUPS` constant at the top of `apps-script-backend.js`, then redeploy.
 
 ## Local preview
 
