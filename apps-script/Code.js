@@ -26,6 +26,48 @@ var EVENT_NAME = "Hyrox Simulation — June 7, 2026";
 // Optional: notify this email on every signup. Leave blank to disable.
 var NOTIFY_EMAIL = "kevschuetz3@gmail.com";
 
+// ══════════════════════════════════════════════════════════
+// SHARED CAPACITY GROUPS
+// Categories within the same group share a single pool of spots
+// (they use the same equipment / weight setup, so they compete
+// for the same slots on the floor).
+// ══════════════════════════════════════════════════════════
+var GROUPS = {
+  A: {
+    capacity: 6,
+    categories: ["Men Pro Singles", "Men Pro Doubles"]
+  },
+  B: {
+    capacity: 6,
+    categories: ["Men Open Singles", "Women Pro Singles", "Men's Open Doubles", "Mixed Open Doubles"]
+  },
+  C: {
+    capacity: 4,
+    categories: ["Women Open Singles", "Men Scaled Singles", "Men's Scaled Doubles", "Women's Open Doubles", "Women's Open Relay"]
+  },
+  D: {
+    capacity: 6,
+    categories: ["Women Scaled Singles", "Mixed Scaled Doubles", "Women's Scaled Doubles"]
+  }
+};
+
+// All valid categories (derived from GROUPS).
+function allCategories() {
+  var out = [];
+  for (var g in GROUPS) {
+    GROUPS[g].categories.forEach(function(c) { out.push(c); });
+  }
+  return out;
+}
+
+// Find which group a category belongs to (or null).
+function groupForCategory(cat) {
+  for (var g in GROUPS) {
+    if (GROUPS[g].categories.indexOf(cat) !== -1) return g;
+  }
+  return null;
+}
+
 // ── SETUP — Run this once ──
 function setup() {
   var ss = getOrCreateSpreadsheet();
@@ -47,100 +89,165 @@ function getOrCreateSpreadsheet() {
 
   sheet.appendRow([
     "Timestamp",
-    "Waitlist?",
     "First Name",
     "Last Name",
     "Email",
-    "Division",
+    "Category",
     "Partner / Teammates",
-    "Weights",
     "Expected Time",
     "Home Gym",
     "Comments"
   ]);
-  sheet.getRange(1, 1, 1, 11)
+  sheet.getRange(1, 1, 1, 9)
     .setFontWeight("bold")
     .setBackground("#0a0a0a")
     .setFontColor("#d6ff3f");
   sheet.setFrozenRows(1);
   sheet.setColumnWidth(1, 170);
-  sheet.setColumnWidth(2, 90);
+  sheet.setColumnWidth(2, 120);
   sheet.setColumnWidth(3, 120);
-  sheet.setColumnWidth(4, 120);
-  sheet.setColumnWidth(5, 220);
-  sheet.setColumnWidth(6, 130);
-  sheet.setColumnWidth(7, 280);
-  sheet.setColumnWidth(8, 100);
-  sheet.setColumnWidth(9, 150);
-  sheet.setColumnWidth(10, 200);
-  sheet.setColumnWidth(11, 320);
+  sheet.setColumnWidth(4, 220);
+  sheet.setColumnWidth(5, 200);
+  sheet.setColumnWidth(6, 280);
+  sheet.setColumnWidth(7, 150);
+  sheet.setColumnWidth(8, 200);
+  sheet.setColumnWidth(9, 320);
 
   return ss;
 }
 
-// Ensure the sheet has the "Waitlist?" column (for sheets created before this column existed).
-function ensureWaitlistColumn(sheet) {
-  var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  if (header.indexOf("Waitlist?") !== -1) return;
-  // Insert "Waitlist?" as column B (after Timestamp).
-  sheet.insertColumnBefore(2);
-  sheet.getRange(1, 2).setValue("Waitlist?")
-    .setFontWeight("bold")
-    .setBackground("#0a0a0a")
-    .setFontColor("#d6ff3f");
-  sheet.setColumnWidth(2, 90);
+// Count signups per category, ignoring rows whose Category cell doesn't
+// match a known category (this naturally excludes legacy waitlist rows
+// from the old form that wrote "Singles" / "Doubles" / etc).
+function countSignupsByCategory() {
+  var ss = getOrCreateSpreadsheet();
+  var sheet = ss.getSheetByName("Signups");
+  if (!sheet) return {};
+
+  var values = sheet.getDataRange().getValues();
+  if (values.length < 2) return {};
+
+  // Find the Category column by header (falls back to column 5 / index 4).
+  var headers = values[0];
+  var catIdx = -1;
+  for (var i = 0; i < headers.length; i++) {
+    var h = String(headers[i] || "").toLowerCase();
+    if (h === "category" || h === "division") { catIdx = i; break; }
+  }
+  if (catIdx === -1) catIdx = 4;
+
+  var valid = allCategories();
+  var counts = {};
+  valid.forEach(function(c) { counts[c] = 0; });
+
+  for (var r = 1; r < values.length; r++) {
+    var cat = String(values[r][catIdx] || "").trim();
+    if (counts.hasOwnProperty(cat)) counts[cat]++;
+  }
+  return counts;
+}
+
+// Returns { groups: { A: 6, B: 6, ... }, categories: { "Men Pro Singles": 6, ... } }
+function getRemainingSpots() {
+  var counts = countSignupsByCategory();
+
+  var groupRemaining = {};
+  for (var g in GROUPS) {
+    var used = 0;
+    GROUPS[g].categories.forEach(function(c) { used += counts[c] || 0; });
+    groupRemaining[g] = Math.max(0, GROUPS[g].capacity - used);
+  }
+
+  var catRemaining = {};
+  for (var g2 in GROUPS) {
+    GROUPS[g2].categories.forEach(function(c) {
+      catRemaining[c] = groupRemaining[g2];
+    });
+  }
+
+  return { groups: groupRemaining, categories: catRemaining };
+}
+
+// ── GET: Return remaining spot counts (used by the page on load) ──
+function doGet(e) {
+  try {
+    var data = getRemainingSpots();
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "ok", spots: data }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "error", error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 // ── POST: Receive signup ──
 function doPost(e) {
+  // Use a script lock so two concurrent signups can't both grab the last spot.
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(8000); } catch (lockErr) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "error", error: "Server busy, please retry." }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   try {
     var data = JSON.parse(e.postData.contents);
+    var category = (data.category || "").toString().trim();
 
-    // Auto-create the spreadsheet on first submission if it doesn't exist yet.
+    if (!category || allCategories().indexOf(category) === -1) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: "error", error: "Invalid category." }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Capacity check — server-side guard against over-signups.
+    var remaining = getRemainingSpots();
+    if ((remaining.categories[category] || 0) <= 0) {
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          status: "error",
+          error: "This category is full. Please pick another.",
+          spots: remaining
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     var ss = getOrCreateSpreadsheet();
     PropertiesService.getScriptProperties().setProperty("SHEET_ID", ss.getId());
     var sheet = ss.getSheetByName("Signups");
-    ensureWaitlistColumn(sheet);
 
-    // Combine partner / teammates into a single column for the sheet
+    // Combine partner / teammates into a single column for the sheet.
     var partnersCol = data.partnerName || data.teammates || "";
-    var isWaitlist = data.waitlist === true || data.waitlist === "true";
 
     sheet.appendRow([
       new Date(),
-      isWaitlist ? "YES" : "",
       data.firstName || "",
       data.lastName || "",
       data.email || "",
-      data.division || "",
+      category,
       partnersCol,
-      data.weights || "",
       data.expectedTime || "",
       data.homeGym || "",
       data.comments || ""
     ]);
 
-    if (isWaitlist) {
-      // Highlight waitlist rows so they're easy to scan in the sheet.
-      var lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow, 1, 1, 11).setBackground("#fff8d6");
-    }
+    // Recompute after writing so the response carries fresh counts.
+    var updated = getRemainingSpots();
 
     if (NOTIFY_EMAIL) {
       try {
         MailApp.sendEmail({
           to: NOTIFY_EMAIL,
-          subject: (isWaitlist ? "[WAITLIST] " : "") + "New Hyrox Simulation Signup — " + (data.firstName || "") + " " + (data.lastName || ""),
+          subject: "New Hyrox Simulation Signup — " + (data.firstName || "") + " " + (data.lastName || ""),
           htmlBody:
-            (isWaitlist
-              ? "<h3 style='color:#a8cc1f'>WAITLIST signup for " + EVENT_NAME + "</h3><p style='font-size:13px;color:#666'>Sign-ups are frozen — this athlete added themselves to the waitlist.</p>"
-              : "<h3>New signup for " + EVENT_NAME + "</h3>") +
+            "<h3>New signup for " + EVENT_NAME + "</h3>" +
             "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
             row("Name", (data.firstName || "") + " " + (data.lastName || "")) +
             row("Email", data.email || "") +
-            row("Division", data.division || "") +
+            row("Category", category) +
             (partnersCol ? row(data.teammates ? "Teammates" : "Partner", partnersCol) : "") +
-            row("Weights", data.weights || "") +
             row("Expected Time", data.expectedTime || "") +
             row("Home Gym", data.homeGym || "") +
             (data.comments ? row("Comments", data.comments) : "") +
@@ -148,19 +255,20 @@ function doPost(e) {
             "<p><a href='" + ss.getUrl() + "'>View all signups in the spreadsheet</a></p>"
         });
       } catch (mailErr) {
-        // Don't fail the submission if email fails
         Logger.log("Email notification failed: " + mailErr);
       }
     }
 
     return ContentService
-      .createTextOutput(JSON.stringify({ status: "ok" }))
+      .createTextOutput(JSON.stringify({ status: "ok", spots: updated }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
     return ContentService
       .createTextOutput(JSON.stringify({ status: "error", error: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    try { lock.releaseLock(); } catch (e2) {}
   }
 }
 
@@ -173,11 +281,4 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, function(c) {
     return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
   });
-}
-
-// ── GET: Health check ──
-function doGet(e) {
-  return ContentService
-    .createTextOutput(JSON.stringify({ status: "ok", message: "Hyrox Simulation signup API running" }))
-    .setMimeType(ContentService.MimeType.JSON);
 }
