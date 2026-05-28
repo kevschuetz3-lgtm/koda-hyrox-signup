@@ -68,6 +68,44 @@ function groupForCategory(cat) {
   return null;
 }
 
+// Extract the weight class (Pro / Open / Scaled) from a category name, so a
+// legacy sheet that still has a "Weights" column gets a meaningful value.
+function weightFromCategory(cat) {
+  if (/pro/i.test(cat)) return "Pro";
+  if (/scaled/i.test(cat)) return "Scaled";
+  if (/open/i.test(cat)) return "Open";
+  return "";
+}
+
+// Build a row array that lines up with the sheet's actual header row.
+// Maps each header (case-insensitively) to the matching record field, so
+// adding/removing columns or reordering them won't shift data into the
+// wrong column. Legacy "Division" maps to category; "Weights" gets the
+// parsed weight class; unknown headers are left blank.
+function buildAlignedRow(sheet, record) {
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  return headers.map(function(h) {
+    switch (String(h).trim().toLowerCase()) {
+      case "timestamp":            return record.timestamp;
+      case "first name":           return record.firstName;
+      case "last name":            return record.lastName;
+      case "email":                return record.email;
+      case "category":
+      case "division":             return record.category;
+      case "partner / teammates":
+      case "partner/teammates":
+      case "partner / teammate":   return record.partners;
+      case "weights":
+      case "weight":               return record.weights;
+      case "expected time":        return record.expectedTime;
+      case "home gym":             return record.homeGym;
+      case "comments":             return record.comments;
+      default:                     return "";
+    }
+  });
+}
+
 // ── SETUP — Run this once ──
 function setup() {
   var ss = getOrCreateSpreadsheet();
@@ -221,17 +259,22 @@ function doPost(e) {
     // Combine partner / teammates into a single column for the sheet.
     var partnersCol = data.partnerName || data.teammates || "";
 
-    sheet.appendRow([
-      new Date(),
-      data.firstName || "",
-      data.lastName || "",
-      data.email || "",
-      category,
-      partnersCol,
-      data.expectedTime || "",
-      data.homeGym || "",
-      data.comments || ""
-    ]);
+    // Write the row aligned to the sheet's ACTUAL header row, so this works
+    // whether the sheet uses the new "Category" schema or the legacy
+    // "Division + Weights" schema (an older sheet won't have been rebuilt).
+    var record = {
+      timestamp: new Date(),
+      firstName: data.firstName || "",
+      lastName: data.lastName || "",
+      email: data.email || "",
+      category: category,
+      partners: partnersCol,
+      weights: weightFromCategory(category),
+      expectedTime: data.expectedTime || "",
+      homeGym: data.homeGym || "",
+      comments: data.comments || ""
+    };
+    sheet.appendRow(buildAlignedRow(sheet, record));
 
     // Recompute after writing so the response carries fresh counts.
     var updated = getRemainingSpots();
