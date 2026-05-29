@@ -76,6 +76,59 @@ function getOrCreateSpreadsheet() {
   return ss;
 }
 
+// In waitlist mode every new signup is tagged this way in the sheet
+// and in the notification email subject.
+var SIGNUP_STATUS = "WAITLIST";
+
+// Lazily add a "Status" column to the right of the existing headers
+// (and a "Tagged At" column so it's clear when the tag was applied),
+// so we can distinguish waitlist signups from confirmed ones at a
+// glance without breaking any existing tooling.
+function ensureStatusColumn(sheet) {
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var hasStatus = false;
+  for (var i = 0; i < headers.length; i++) {
+    if (String(headers[i]).trim().toLowerCase() === "status") { hasStatus = true; break; }
+  }
+  if (!hasStatus) {
+    var col = lastCol + 1;
+    sheet.getRange(1, col)
+      .setValue("Status")
+      .setFontWeight("bold")
+      .setBackground("#0a0a0a")
+      .setFontColor("#d6ff3f");
+    sheet.setColumnWidth(col, 120);
+  }
+}
+
+// Build a row aligned to whatever headers the sheet actually has, so the
+// values land in the right columns regardless of layout (and the Status
+// value lands in the Status column even if it isn't the last one).
+function buildAlignedRow(sheet, record) {
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  return headers.map(function(h) {
+    switch (String(h).trim().toLowerCase()) {
+      case "timestamp":            return record.timestamp;
+      case "first name":           return record.firstName;
+      case "last name":            return record.lastName;
+      case "email":                return record.email;
+      case "category":
+      case "division":             return record.division;
+      case "partner / teammates":
+      case "partner/teammates":    return record.partners;
+      case "weights":
+      case "weight":               return record.weights;
+      case "expected time":        return record.expectedTime;
+      case "home gym":             return record.homeGym;
+      case "comments":             return record.comments;
+      case "status":               return record.status;
+      default:                     return "";
+    }
+  });
+}
+
 // ── POST: Receive signup ──
 function doPost(e) {
   try {
@@ -86,30 +139,36 @@ function doPost(e) {
     PropertiesService.getScriptProperties().setProperty("SHEET_ID", ss.getId());
     var sheet = ss.getSheetByName("Signups");
 
+    // Make sure a Status column exists so we can tag waitlist rows.
+    ensureStatusColumn(sheet);
+
     // Combine partner / teammates into a single column for the sheet
     var partnersCol = data.partnerName || data.teammates || "";
 
-    sheet.appendRow([
-      new Date(),
-      data.firstName || "",
-      data.lastName || "",
-      data.email || "",
-      data.division || "",
-      partnersCol,
-      data.weights || "",
-      data.expectedTime || "",
-      data.homeGym || "",
-      data.comments || ""
-    ]);
+    var record = {
+      timestamp: new Date(),
+      firstName: data.firstName || "",
+      lastName: data.lastName || "",
+      email: data.email || "",
+      division: data.division || "",
+      partners: partnersCol,
+      weights: data.weights || "",
+      expectedTime: data.expectedTime || "",
+      homeGym: data.homeGym || "",
+      comments: data.comments || "",
+      status: SIGNUP_STATUS
+    };
+    sheet.appendRow(buildAlignedRow(sheet, record));
 
     if (NOTIFY_EMAIL) {
       try {
         MailApp.sendEmail({
           to: NOTIFY_EMAIL,
-          subject: "New Hyrox Simulation Signup — " + (data.firstName || "") + " " + (data.lastName || ""),
+          subject: "[" + SIGNUP_STATUS + "] New Hyrox Simulation Signup — " + (data.firstName || "") + " " + (data.lastName || ""),
           htmlBody:
             "<h3>New signup for " + EVENT_NAME + "</h3>" +
             "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
+            row("Status", SIGNUP_STATUS) +
             row("Name", (data.firstName || "") + " " + (data.lastName || "")) +
             row("Email", data.email || "") +
             row("Division", data.division || "") +
