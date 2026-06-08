@@ -92,3 +92,39 @@ Adjust capacities by editing the `GROUPS` constant at the top of `apps-script-ba
 ## Local preview
 
 Just open `index.html` in a browser. While `SCRIPT_URL` is still the placeholder, the form runs in "preview mode" — submissions are logged to the browser console instead of being sent anywhere, and you'll still see the success screen.
+
+---
+
+## Post-event feedback survey
+
+A second page, `feedback.html`, collects post-event feedback. It's served from the same GitHub Pages site at `.../feedback.html` and is **already live** — no extra setup needed.
+
+### How it works
+
+Rather than a separate Apps Script project, the feedback page posts to the **same** web app as signups (`apps-script/Code.js`). The backend looks for `type: "feedback"` in the payload and routes those submissions to their **own** spreadsheet — **"Koda Hyrox Feedback"** in your Drive — so feedback and signups never mix. This reuses the existing authorization, so nothing new had to be authorized.
+
+To change the feedback questions/columns later, edit `apps-script/Code.js` (the `handleFeedback` / `FEEDBACK_HEADERS` section), then from the `apps-script/` folder:
+
+```bash
+clasp push
+clasp redeploy AKfycbwWjHrhE6k3vVPDXD4qi3VLxZVAXMykAFIKocoUiq0BtXdv2XLy7Oo0GRfrP48fHytnyw -d "Update feedback"
+```
+
+(The URL stays the same across redeploys.) `apps-script-backend.js` in the repo root is a reference copy of the deployed `Code.js`.
+
+### Questions collected
+
+| Field | Type |
+|---|---|
+| Overall rating | 1–5 |
+| Organization (check-in, heats, station flow) | 1–5 |
+| Hyrox accuracy (stations, order, distances, transitions) | 1–5 |
+| Likelihood to do another | 1–5 |
+| Energy / atmosphere (music, cheering, judges) | 1–5 |
+| Interested in a lead-up training program (next sim / Nov Denver Hyrox) | Yes / No |
+| Interested in a free class at Koda Iron View | Yes / No |
+| Suggested class times to add | checkbox grid (Mon–Fri × 6:30am, 7:30am, 11am, Noon, 4pm, 4:30pm, 5:00pm, 5:30pm) — shown only if "free class" = Yes |
+| Comments | optional text |
+| Name / Email | optional (required only if they want a follow-up) |
+
+All questions are optional except: if someone says **Yes** to a free class or training program, an email is required so you can follow up. The class-times grid only appears when they pick **Yes** for the free class.

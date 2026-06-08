@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Feedback — Hyrox Simulation · Koda CrossFit Iron View</title>
+  <meta name="description" content="Tell us how the Koda Hyrox Simulation went — quick feedback survey.">
+  <link rel="icon" type="image/png" href="assets/koda-mark.png">
+  <link rel="apple-touch-icon" href="assets/koda-mark.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --panel: #141414;
+      --panel-2: #1c1c1c;
+      --border: #2a2a2a;
+      --text: #f5f5f5;
+      --muted: #9a9a9a;
+      --accent: #d6ff3f;       /* Hyrox lime/yellow */
+      --accent-dark: #a8cc1f;
+      --error: #f87171;
+    }
+
+    html, body { background: var(--bg); }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      padding: 56px 20px 48px;
+      text-align: center;
+      background:
+        radial-gradient(ellipse at top, rgba(214,255,63,0.10) 0%, transparent 60%),
+        linear-gradient(180deg, #000 0%, #0a0a0a 100%);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(45deg, rgba(214,255,63,0.03) 0 2px, transparent 2px 18px);
+      pointer-events: none;
+    }
+
+    .koda-mark {
+      display: block;
+      width: 72px;
+      height: auto;
+      margin: 0 auto 20px;
+      filter: brightness(0) invert(1);
+    }
+
+    .eyebrow {
+      display: inline-block;
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 0.25em;
+      font-size: 0.95rem;
+      color: var(--accent);
+      padding: 6px 14px;
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      margin-bottom: 18px;
+    }
+
+    h1.hero-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-weight: 400;
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      letter-spacing: 0.04em;
+      line-height: 1.0;
+      margin-bottom: 14px;
+      color: #fff;
+    }
+
+    h1.hero-title .accent { color: var(--accent); }
+
+    .hero-sub {
+      max-width: 560px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    /* ── Container ── */
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 36px 20px 64px;
+    }
+
+    .info-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 28px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .info-card strong { color: var(--accent); }
+
+    /* ── Form ── */
+    form {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 24px;
+    }
+
+    .q {
+      padding: 22px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .q:first-child { padding-top: 4px; }
+    .q:last-of-type { border-bottom: none; }
+
+    .q-label {
+      display: block;
+      font-size: 1.02rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .q-label .req { color: var(--accent); margin-left: 2px; }
+
+    .q-hint {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── 1–5 Rating scale ── */
+    .rating-scale {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    .rating-cell { position: relative; cursor: pointer; }
+    .rating-cell input { position: absolute; opacity: 0; pointer-events: none; }
+
+    .rating-cell .cell-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 0;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      transition: all 0.15s ease;
+    }
+
+    .rating-cell:hover .cell-inner { border-color: #555; }
+
+    .rating-cell input:checked + .cell-inner {
+      border-color: var(--accent);
+      background: rgba(214,255,63,0.10);
+      color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+    .rating-cell input:focus-visible + .cell-inner {
+      box-shadow: 0 0 0 3px rgba(214,255,63,0.30);
+    }
+
+    .scale-ends {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Yes/No ── */
+    .yesno {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      max-width: 320px;
+    }
+
+    .yesno-cell { position: relative; cursor: pointer; }
+    .yesno-cell input { position: absolute; opacity: 0; pointer-events: none; }
+
+    .yesno-cell .cell-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 0;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      transition: all 0.15s ease;
+    }
+
+    .yesno-cell:hover .cell-inner { border-color: #555; }
+
+    .yesno-cell input:checked + .cell-inner {
+      border-color: var(--accent);
+      background: rgba(214,255,63,0.10);
+      color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+    .yesno-cell input:focus-visible + .cell-inner {
+      box-shadow: 0 0 0 3px rgba(214,255,63,0.30);
+    }
+
+    /* ── Conditional class-times grid ── */
+    .conditional {
+      display: none;
+      margin-top: 18px;
+      padding: 18px 16px 8px;
+      background: var(--panel-2);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+    }
+    .conditional.show { display: block; }
+
+    .conditional .cond-label {
+      display: block;
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .conditional .cond-hint {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    table.times-grid {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 420px;
+    }
+
+    table.times-grid th,
+    table.times-grid td {
+      text-align: center;
+      padding: 8px 4px;
+    }
+
+    table.times-grid thead th {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+    }
+
+    table.times-grid thead th.time-head,
+    table.times-grid tbody td.time-cell {
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    table.times-grid tbody td.time-cell {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+      padding-right: 10px;
+    }
+
+    table.times-grid tbody tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+
+    /* Checkbox styled as a tappable cell */
+    .time-check { position: relative; display: inline-block; cursor: pointer; }
+    .time-check input { position: absolute; opacity: 0; pointer-events: none; }
+    .time-check .box {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--panel);
+      transition: all 0.12s ease;
+    }
+    .time-check .box::after {
+      content: '';
+      width: 11px;
+      height: 6px;
+      border-left: 2.5px solid #000;
+      border-bottom: 2.5px solid #000;
+      transform: rotate(-45deg) scale(0);
+      margin-top: -3px;
+      transition: transform 0.12s ease;
+    }
+    .time-check:hover .box { border-color: #555; }
+    .time-check input:checked + .box {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .time-check input:checked + .box::after { transform: rotate(-45deg) scale(1); }
+    .time-check input:focus-visible + .box { box-shadow: 0 0 0 3px rgba(214,255,63,0.30); }
+
+    .grid-actions {
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: right;
+    }
+    .grid-actions button {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.8rem;
+      padding: 4px;
+    }
+    .grid-actions button:hover { text-decoration: underline; }
+
+    /* ── Text inputs ── */
+    label.std-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    textarea {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(214,255,63,0.15);
+    }
+
+    textarea { resize: vertical; min-height: 90px; }
+
+    .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .field-row .field { flex: 1; min-width: 200px; }
+    .field { margin-bottom: 0; }
+
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.25rem;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    /* ── Submit ── */
+    .submit-btn {
+      display: block;
+      width: 100%;
+      margin-top: 28px;
+      padding: 16px;
+      background: var(--accent);
+      color: #000;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: 0.12em;
+      font-weight: 400;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .submit-btn:hover:not(:disabled) { background: var(--accent-dark); transform: translateY(-1px); }
+    .submit-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+    .form-error {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: rgba(248,113,113,0.1);
+      border: 1px solid var(--error);
+      border-radius: 8px;
+      color: var(--error);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    .form-error.show { display: block; }
+
+    /* ── Success ── */
+    .success-msg {
+      display: none;
+      text-align: center;
+      padding: 56px 24px;
+      background: var(--panel);
+      border: 1px solid var(--accent);
+      border-radius: 14px;
+    }
+    .success-msg.show { display: block; }
+
+    .success-check {
+      width: 64px; height: 64px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      color: #000; font-size: 32px; font-weight: bold;
+    }
+
+    .success-msg h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 0.06em;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .success-msg p { color: var(--muted); max-width: 420px; margin: 0 auto; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 24px 20px 40px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Loading ── */
+    .loading {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      justify-content: center; align-items: center;
+      flex-direction: column; gap: 16px;
+    }
+    .loading.active { display: flex; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 480px) {
+      .hero { padding: 44px 16px 36px; }
+      .container { padding: 26px 14px 48px; }
+      form { padding: 22px 16px; }
+      .rating-cell .cell-inner { font-size: 1.25rem; padding: 13px 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ HERO ═══ -->
+  <section class="hero">
+    <img class="koda-mark" src="assets/koda-mark.png" alt="Koda">
+    <span class="eyebrow">KODA CROSSFIT IRON VIEW</span>
+    <h1 class="hero-title">EVENT <span class="accent">FEEDBACK</span></h1>
+    <p class="hero-sub">How'd we do? Your feedback on the Hyrox Simulation helps us make the next one even better. Takes about 60 seconds.</p>
+  </section>
+
+  <!-- ═══ FORM ═══ -->
+  <main class="container">
+    <div class="info-card" id="infoCard">
+      <strong>Thanks for racing with us.</strong> Every question is optional — answer what you can. Tap a number 1 (low) to 5 (high).
+    </div>
+
+    <form id="feedbackForm" novalidate>
+
+      <!-- 1. Overall -->
+      <div class="q">
+        <span class="q-label">Overall, how would you rate the event?</span>
+        <span class="q-hint">Your gut reaction to the whole experience.</span>
+        <div class="rating-scale" role="radiogroup" aria-label="Overall rating" data-name="overall"></div>
+        <div class="scale-ends"><span>1 · Poor</span><span>5 · Excellent</span></div>
+      </div>
+
+      <!-- 2. Organization -->
+      <div class="q">
+        <span class="q-label">How well-organized did the event feel?</span>
+        <span class="q-hint">Check-in, heat starts, flow between stations.</span>
+        <div class="rating-scale" role="radiogroup" aria-label="Organization rating" data-name="organization"></div>
+        <div class="scale-ends"><span>1 · Chaotic</span><span>5 · Seamless</span></div>
+      </div>
+
+      <!-- 3. Accuracy -->
+      <div class="q">
+        <span class="q-label">How accurate did it feel to a real Hyrox?</span>
+        <span class="q-hint">Stations, order, distances, transitions.</span>
+        <div class="rating-scale" role="radiogroup" aria-label="Hyrox accuracy rating" data-name="accuracy"></div>
+        <div class="scale-ends"><span>1 · Way off</span><span>5 · Spot on</span></div>
+      </div>
+
+      <!-- 4. Likelihood -->
+      <div class="q">
+        <span class="q-label">How likely are you to do another one?</span>
+        <span class="q-hint">Would you sign up for the next simulation?</span>
+        <div class="rating-scale" role="radiogroup" aria-label="Likelihood to repeat" data-name="likelihood"></div>
+        <div class="scale-ends"><span>1 · No way</span><span>5 · Sign me up</span></div>
+      </div>
+
+      <!-- 5. Atmosphere -->
+      <div class="q">
+        <span class="q-label">How was the energy / atmosphere?</span>
+        <span class="q-hint">Music, cheering, judges.</span>
+        <div class="rating-scale" role="radiogroup" aria-label="Atmosphere rating" data-name="atmosphere"></div>
+        <div class="scale-ends"><span>1 · Flat</span><span>5 · Electric</span></div>
+      </div>
+
+      <!-- 6. Training program interest -->
+      <div class="q">
+        <span class="q-label">Interested in a training program leading up to the next simulation or the November Denver Hyrox?</span>
+        <span class="q-hint">A structured plan to get you race-ready.</span>
+        <div class="yesno" role="radiogroup" aria-label="Training program interest">
+          <label class="yesno-cell">
+            <input type="radio" name="trainingProgram" value="Yes">
+            <div class="cell-inner">YES</div>
+          </label>
+          <label class="yesno-cell">
+            <input type="radio" name="trainingProgram" value="No">
+            <div class="cell-inner">NO</div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 7. Free class interest + conditional grid -->
+      <div class="q">
+        <span class="q-label">Want to try a FREE class at Koda Iron View?</span>
+        <span class="q-hint">No strings — come see what we're about.</span>
+        <div class="yesno" role="radiogroup" aria-label="Free class interest">
+          <label class="yesno-cell">
+            <input type="radio" name="freeClass" value="Yes">
+            <div class="cell-inner">YES</div>
+          </label>
+          <label class="yesno-cell">
+            <input type="radio" name="freeClass" value="No">
+            <div class="cell-inner">NO</div>
+          </label>
+        </div>
+
+        <div class="conditional" id="classTimesBlock">
+          <span class="cond-label">What class times should we add to our Hyrox schedule?</span>
+          <span class="cond-hint">Check all that apply — pick any day/time combos that would work for you.</span>
+          <div class="grid-scroll">
+            <table class="times-grid" id="timesGrid">
+              <thead>
+                <tr>
+                  <th class="time-head">Time</th>
+                  <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th>
+                </tr>
+              </thead>
+              <tbody><!-- rows injected by JS --></tbody>
+            </table>
+          </div>
+          <div class="grid-actions">
+            <button type="button" id="clearTimes">Clear all</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Open comment -->
+      <div class="q">
+        <span class="q-label">Anything else? <span style="font-weight:400;color:var(--muted);font-size:0.85rem;">(optional)</span></span>
+        <span class="q-hint">Favorite moment, one thing to improve, anything on your mind.</span>
+        <textarea id="comments" name="comments" placeholder="Optional — your thoughts help a ton."></textarea>
+      </div>
+
+      <!-- Contact (optional) -->
+      <div class="q">
+        <div class="section-title">YOUR INFO</div>
+        <span class="q-hint" id="contactHint">Optional — but required if you'd like us to follow up about a free class or training program.</span>
+        <div class="field-row" style="margin-bottom:16px;">
+          <div class="field">
+            <label class="std-label" for="name">Name</label>
+            <input type="text" id="name" name="name" autocomplete="name">
+          </div>
+          <div class="field">
+            <label class="std-label" for="email">Email</label>
+            <input type="email" id="email" name="email" autocomplete="email">
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">SUBMIT FEEDBACK</button>
+      <div class="form-error" id="formError"></div>
+    </form>
+
+    <div class="success-msg" id="successMsg">
+      <div class="success-check">✓</div>
+      <h2>THANK YOU!</h2>
+      <p id="successText">Your feedback is in — we read every response. See you at the next one.</p>
+    </div>
+  </main>
+
+  <footer>
+    Koda CrossFit Iron View &middot; 740 S Pierce Ave, Louisville, CO 80027<br>
+    Questions? Email <a href="mailto:kevschuetz3@gmail.com">kevschuetz3@gmail.com</a>
+  </footer>
+
+  <div class="loading" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div>Submitting...</div>
+  </div>
+
+  <script>
+    // ══════════════════════════════════════════════════
+    // CONFIGURATION
+    // Posts to the same Apps Script web app as signups; the backend
+    // routes type:"feedback" to its own "Koda Hyrox Feedback" sheet.
+    // ══════════════════════════════════════════════════
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWjHrhE6k3vVPDXD4qi3VLxZVAXMykAFIKocoUiq0BtXdv2XLy7Oo0GRfrP48fHytnyw/exec";
+
+    var DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    var TIMES = ["6:30am", "7:30am", "11am", "Noon", "4pm", "4:30pm", "5:00pm", "5:30pm"];
+
+    // ── Build 1–5 rating scales ──
+    document.querySelectorAll('.rating-scale').forEach(function(scale) {
+      var name = scale.getAttribute('data-name');
+      for (var i = 1; i <= 5; i++) {
+        var label = document.createElement('label');
+        label.className = 'rating-cell';
+        label.innerHTML =
+          '<input type="radio" name="' + name + '" value="' + i + '" aria-label="' + i + '">' +
+          '<div class="cell-inner">' + i + '</div>';
+        scale.appendChild(label);
+      }
+    });
+
+    // ── Build class-times grid ──
+    var tbody = document.querySelector('#timesGrid tbody');
+    TIMES.forEach(function(time) {
+      var tr = document.createElement('tr');
+      var cells = '<td class="time-cell">' + time + '</td>';
+      DAYS.forEach(function(day) {
+        cells +=
+          '<td><label class="time-check">' +
+          '<input type="checkbox" name="classTime" value="' + day + ' ' + time + '" ' +
+          'aria-label="' + day + ' ' + time + '"><span class="box"></span></label></td>';
+      });
+      tr.innerHTML = cells;
+      tbody.appendChild(tr);
+    });
+
+    // ── Conditional class-times block ──
+    var classTimesBlock = document.getElementById('classTimesBlock');
+    document.querySelectorAll('input[name="freeClass"]').forEach(function(r) {
+      r.addEventListener('change', function() {
+        classTimesBlock.classList.toggle('show', r.value === 'Yes' && r.checked);
+      });
+    });
+
+    document.getElementById('clearTimes').addEventListener('click', function() {
+      document.querySelectorAll('input[name="classTime"]').forEach(function(c) { c.checked = false; });
+    });
+
+    // ── Submission ──
+    var form = document.getElementById('feedbackForm');
+    var submitBtn = document.getElementById('submitBtn');
+    var formError = document.getElementById('formError');
+    var loadingOverlay = document.getElementById('loadingOverlay');
+
+    function showError(msg) {
+      formError.textContent = msg;
+      formError.classList.add('show');
+      formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function clearError() {
+      formError.classList.remove('show');
+      formError.textContent = '';
+    }
+    function val(name) {
+      var el = document.querySelector('input[name="' + name + '"]:checked');
+      return el ? el.value : '';
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      clearError();
+
+      var times = [];
+      document.querySelectorAll('input[name="classTime"]:checked').forEach(function(c) {
+        times.push(c.value);
+      });
+
+      var data = {
+        type: 'feedback',
+        overall: val('overall'),
+        organization: val('organization'),
+        accuracy: val('accuracy'),
+        likelihood: val('likelihood'),
+        atmosphere: val('atmosphere'),
+        trainingProgram: val('trainingProgram'),
+        freeClass: val('freeClass'),
+        classTimes: times.join(', '),
+        comments: document.getElementById('comments').value.trim(),
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim()
+      };
+
+      // If they want a follow-up, we need a way to reach them.
+      var wantsFollowUp = data.freeClass === 'Yes' || data.trainingProgram === 'Yes';
+      if (wantsFollowUp && !data.email) {
+        return showError('Please add your email so we can follow up about the free class / training program.');
+      }
+      if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        return showError('That email doesn’t look right — please double-check it.');
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'SUBMITTING...';
+      loadingOverlay.classList.add('active');
+
+      // Local preview mode (before backend is deployed)
+      if (SCRIPT_URL === 'YOUR_FEEDBACK_APPS_SCRIPT_WEB_APP_URL') {
+        console.log('Feedback (preview mode):', JSON.stringify(data, null, 2));
+        setTimeout(function() {
+          loadingOverlay.classList.remove('active');
+          showSuccess(data);
+        }, 600);
+        return;
+      }
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(data)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(resp) {
+        loadingOverlay.classList.remove('active');
+        if (resp.status === 'ok') { showSuccess(data); }
+        else { throw new Error(resp.error || 'Unknown error'); }
+      })
+      .catch(function(err) {
+        loadingOverlay.classList.remove('active');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'SUBMIT FEEDBACK';
+        showError('Something went wrong — please try again. (' + err.message + ')');
+      });
+    });
+
+    function showSuccess(data) {
+      document.getElementById('feedbackForm').style.display = 'none';
+      document.getElementById('infoCard').style.display = 'none';
+      var st = document.getElementById('successText');
+      if (data.freeClass === 'Yes' || data.trainingProgram === 'Yes') {
+        st.textContent = 'Your feedback is in — thank you! We’ll be in touch by email about your free class / training program. See you soon.';
+      }
+      document.getElementById('successMsg').classList.add('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>

@@ -129,10 +129,16 @@ function buildAlignedRow(sheet, record) {
   });
 }
 
-// ── POST: Receive signup ──
+// ── POST: Receive signup OR feedback ──
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
+
+    // Feedback survey posts include type:"feedback" — route those to their
+    // own spreadsheet, separate from signups.
+    if (data.type === "feedback") {
+      return handleFeedback(data);
+    }
 
     // Auto-create the spreadsheet on first submission if it doesn't exist yet.
     var ss = getOrCreateSpreadsheet();
@@ -206,6 +212,131 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, function(c) {
     return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
   });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FEEDBACK SURVEY  (posted from feedback.html with type:"feedback")
+// Writes to a SEPARATE spreadsheet ("Koda Hyrox Feedback") so it
+// never mixes with signups.
+// ═══════════════════════════════════════════════════════════════
+
+var FEEDBACK_HEADERS = [
+  "Timestamp",
+  "Overall (1-5)",
+  "Organization (1-5)",
+  "Hyrox Accuracy (1-5)",
+  "Likelihood to Repeat (1-5)",
+  "Atmosphere (1-5)",
+  "Training Program Interest",
+  "Free Class Interest",
+  "Suggested Class Times",
+  "Name",
+  "Email",
+  "Comments"
+];
+
+function getOrCreateFeedbackSpreadsheet() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty("FEEDBACK_SHEET_ID");
+  if (id) {
+    try { return SpreadsheetApp.openById(id); } catch (e) { /* fall through and create */ }
+  }
+
+  var ss = SpreadsheetApp.create("Koda Hyrox Feedback");
+  var sheet = ss.getActiveSheet();
+  sheet.setName("Feedback");
+  sheet.appendRow(FEEDBACK_HEADERS);
+  sheet.getRange(1, 1, 1, FEEDBACK_HEADERS.length)
+    .setFontWeight("bold")
+    .setBackground("#0a0a0a")
+    .setFontColor("#d6ff3f");
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidth(1, 160);
+  sheet.setColumnWidth(7, 170);
+  sheet.setColumnWidth(8, 150);
+  sheet.setColumnWidth(9, 320);
+  sheet.setColumnWidth(10, 140);
+  sheet.setColumnWidth(11, 220);
+  sheet.setColumnWidth(12, 380);
+
+  props.setProperty("FEEDBACK_SHEET_ID", ss.getId());
+  return ss;
+}
+
+function buildAlignedFeedbackRow(sheet, record) {
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  return headers.map(function(h) {
+    switch (String(h).trim().toLowerCase()) {
+      case "timestamp":                   return record.timestamp;
+      case "overall (1-5)":               return record.overall;
+      case "organization (1-5)":          return record.organization;
+      case "hyrox accuracy (1-5)":        return record.accuracy;
+      case "likelihood to repeat (1-5)":  return record.likelihood;
+      case "atmosphere (1-5)":            return record.atmosphere;
+      case "training program interest":   return record.trainingProgram;
+      case "free class interest":         return record.freeClass;
+      case "suggested class times":       return record.classTimes;
+      case "name":                        return record.name;
+      case "email":                       return record.email;
+      case "comments":                    return record.comments;
+      default:                            return "";
+    }
+  });
+}
+
+function handleFeedback(data) {
+  var ss = getOrCreateFeedbackSpreadsheet();
+  var sheet = ss.getSheetByName("Feedback");
+
+  var record = {
+    timestamp: new Date(),
+    overall: data.overall || "",
+    organization: data.organization || "",
+    accuracy: data.accuracy || "",
+    likelihood: data.likelihood || "",
+    atmosphere: data.atmosphere || "",
+    trainingProgram: data.trainingProgram || "",
+    freeClass: data.freeClass || "",
+    classTimes: data.classTimes || "",
+    name: data.name || "",
+    email: data.email || "",
+    comments: data.comments || ""
+  };
+  sheet.appendRow(buildAlignedFeedbackRow(sheet, record));
+
+  if (NOTIFY_EMAIL) {
+    try {
+      var wantsFollowUp = record.freeClass === "Yes" || record.trainingProgram === "Yes";
+      MailApp.sendEmail({
+        to: NOTIFY_EMAIL,
+        subject: (wantsFollowUp ? "[FOLLOW UP] " : "") + "New Hyrox Feedback" +
+                 (record.name ? " — " + record.name : ""),
+        htmlBody:
+          "<h3>New Hyrox Simulation feedback</h3>" +
+          "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
+          row("Overall", record.overall) +
+          row("Organization", record.organization) +
+          row("Hyrox Accuracy", record.accuracy) +
+          row("Likelihood to Repeat", record.likelihood) +
+          row("Atmosphere", record.atmosphere) +
+          row("Training Program?", record.trainingProgram) +
+          row("Free Class?", record.freeClass) +
+          (record.classTimes ? row("Suggested Times", record.classTimes) : "") +
+          (record.name ? row("Name", record.name) : "") +
+          (record.email ? row("Email", record.email) : "") +
+          (record.comments ? row("Comments", record.comments) : "") +
+          "</table>" +
+          "<p><a href='" + ss.getUrl() + "'>View all feedback in the spreadsheet</a></p>"
+      });
+    } catch (mailErr) {
+      Logger.log("Feedback email notification failed: " + mailErr);
+    }
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: "ok" }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 // ── GET: Health check ──
