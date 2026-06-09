@@ -499,10 +499,26 @@
   <!-- ═══ FORM ═══ -->
   <main class="container">
     <div class="info-card" id="infoCard">
-      <strong>Thanks for racing with us.</strong> Every question is optional — answer what you can. Tap a number 1 (low) to 5 (high).
+      <strong>Thanks for racing with us.</strong> Drop your name and email, then tap a number 1 (low) to 5 (high) for each. Takes about 60 seconds.
     </div>
 
     <form id="feedbackForm" novalidate>
+
+      <!-- Contact (required) -->
+      <div class="q">
+        <div class="section-title">YOUR INFO</div>
+        <span class="q-hint" id="contactHint">So we can follow up about results, free classes, and upcoming events.</span>
+        <div class="field-row" style="margin-bottom:16px;">
+          <div class="field">
+            <label class="std-label" for="name">Name <span class="req" style="color:var(--accent);">*</span></label>
+            <input type="text" id="name" name="name" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label class="std-label" for="email">Email <span class="req" style="color:var(--accent);">*</span></label>
+            <input type="email" id="email" name="email" autocomplete="email" required>
+          </div>
+        </div>
+      </div>
 
       <!-- 1. Overall -->
       <div class="q">
@@ -544,23 +560,7 @@
         <div class="scale-ends"><span>1 · Flat</span><span>5 · Electric</span></div>
       </div>
 
-      <!-- 6. Training program interest -->
-      <div class="q">
-        <span class="q-label">Interested in a training program leading up to the next simulation or the November Denver Hyrox?</span>
-        <span class="q-hint">A structured plan to get you race-ready.</span>
-        <div class="yesno" role="radiogroup" aria-label="Training program interest">
-          <label class="yesno-cell">
-            <input type="radio" name="trainingProgram" value="Yes">
-            <div class="cell-inner">YES</div>
-          </label>
-          <label class="yesno-cell">
-            <input type="radio" name="trainingProgram" value="No">
-            <div class="cell-inner">NO</div>
-          </label>
-        </div>
-      </div>
-
-      <!-- 7. Free class interest + conditional grid -->
+      <!-- Free class interest + conditional grid -->
       <div class="q">
         <span class="q-label">Want to try a FREE class at Koda Iron View?</span>
         <span class="q-hint">No strings — come see what we're about.</span>
@@ -602,19 +602,19 @@
         <textarea id="comments" name="comments" placeholder="Optional — your thoughts help a ton."></textarea>
       </div>
 
-      <!-- Contact (optional) -->
+      <!-- Training program interest (last question) -->
       <div class="q">
-        <div class="section-title">YOUR INFO</div>
-        <span class="q-hint" id="contactHint">Optional — but required if you'd like us to follow up about a free class or training program.</span>
-        <div class="field-row" style="margin-bottom:16px;">
-          <div class="field">
-            <label class="std-label" for="name">Name</label>
-            <input type="text" id="name" name="name" autocomplete="name">
-          </div>
-          <div class="field">
-            <label class="std-label" for="email">Email</label>
-            <input type="email" id="email" name="email" autocomplete="email">
-          </div>
+        <span class="q-label">Interested in a training program leading up to the next simulation or the November Denver Hyrox?</span>
+        <span class="q-hint">A structured plan to get you race-ready.</span>
+        <div class="yesno" role="radiogroup" aria-label="Training program interest">
+          <label class="yesno-cell">
+            <input type="radio" name="trainingProgram" value="Yes">
+            <div class="cell-inner">YES</div>
+          </label>
+          <label class="yesno-cell">
+            <input type="radio" name="trainingProgram" value="No">
+            <div class="cell-inner">NO</div>
+          </label>
         </div>
       </div>
 
@@ -734,13 +734,12 @@
         email: document.getElementById('email').value.trim()
       };
 
-      // If they want a follow-up, we need a way to reach them.
-      var wantsFollowUp = data.freeClass === 'Yes' || data.trainingProgram === 'Yes';
-      if (wantsFollowUp && !data.email) {
-        return showError('Please add your email so we can follow up about the free class / training program.');
+      // Name and email are required.
+      if (!data.name) {
+        return showError('Please add your name.');
       }
-      if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-        return showError('That email doesn’t look right — please double-check it.');
+      if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        return showError('Please enter a valid email address.');
       }
 
       submitBtn.disabled = true;
