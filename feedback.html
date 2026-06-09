@@ -253,6 +253,16 @@
       color: var(--muted);
       margin-bottom: 14px;
     }
+    .conditional .cond-callout {
+      display: block;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.5rem, 5vw, 2rem);
+      letter-spacing: 0.04em;
+      line-height: 1.05;
+      color: var(--accent);
+      text-align: center;
+      margin: 4px 0 16px;
+    }
 
     .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
@@ -577,7 +587,7 @@
 
         <div class="conditional" id="classTimesBlock">
           <span class="cond-label">What class times should we add to our Hyrox schedule?</span>
-          <span class="cond-hint">Check all that apply — pick any day/time combos that would work for you.</span>
+          <span class="cond-callout">Check all times you are interested in</span>
           <div class="grid-scroll">
             <table class="times-grid" id="timesGrid">
               <thead>
