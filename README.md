@@ -125,6 +125,19 @@ clasp redeploy AKfycbwWjHrhE6k3vVPDXD4qi3VLxZVAXMykAFIKocoUiq0BtXdv2XLy7Oo0GRfrP
 | Interested in a free class at Koda Iron View | Yes / No |
 | Suggested class times to add | checkbox grid (Mon–Fri × 6:30am, 7:30am, 11am, Noon, 4pm, 4:30pm, 5:00pm, 5:30pm) — shown only if "free class" = Yes |
 | Comments | optional text |
-| Name / Email | optional (required only if they want a follow-up) |
+| Name / Email | **required** (at the top of the form) |
 
-All questions are optional except: if someone says **Yes** to a free class or training program, an email is required so you can follow up. The class-times grid only appears when they pick **Yes** for the free class.
+Name and email are required; the rating/Yes-No questions are optional. The class-times grid only appears when they pick **Yes** for the free class. The training-program question is the last question.
+
+---
+
+## Class-time poll (for current members)
+
+A third page, `class-times.html`, is a stripped-down poll for gym members who **didn't** do the simulation — it asks only for their **name** and their **preferred Hyrox class times** (same Mon–Fri grid). Send this one to people who already train at the gym.
+
+It posts to the same web app with `type: "classtimes"` and lands in its **own** spreadsheet — **"Koda Hyrox Class Time Requests"** — separate from both signups and simulation feedback. To edit, change the `handleClassTimes` / `CLASSTIMES_HEADERS` section of `apps-script/Code.js`, then `clasp push` + `clasp redeploy` as above.
+
+| Field | Type |
+|---|---|
+| Name | **required** |
+| Preferred class times | checkbox grid (Mon–Fri × the 8 times), at least one required |

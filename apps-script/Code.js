@@ -140,6 +140,11 @@ function doPost(e) {
       return handleFeedback(data);
     }
 
+    // Class-time poll posts (for gym members) include type:"classtimes".
+    if (data.type === "classtimes") {
+      return handleClassTimes(data);
+    }
+
     // Auto-create the spreadsheet on first submission if it doesn't exist yet.
     var ss = getOrCreateSpreadsheet();
     PropertiesService.getScriptProperties().setProperty("SHEET_ID", ss.getId());
@@ -331,6 +336,89 @@ function handleFeedback(data) {
       });
     } catch (mailErr) {
       Logger.log("Feedback email notification failed: " + mailErr);
+    }
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: "ok" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CLASS-TIME POLL  (posted from class-times.html with type:"classtimes")
+// For gym members who already train here — just name + preferred times.
+// Writes to its OWN spreadsheet ("Koda Hyrox Class Time Requests").
+// ═══════════════════════════════════════════════════════════════
+
+var CLASSTIMES_HEADERS = [
+  "Timestamp",
+  "Name",
+  "Preferred Class Times"
+];
+
+function getOrCreateClassTimesSpreadsheet() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty("CLASSTIMES_SHEET_ID");
+  if (id) {
+    try { return SpreadsheetApp.openById(id); } catch (e) { /* fall through and create */ }
+  }
+
+  var ss = SpreadsheetApp.create("Koda Hyrox Class Time Requests");
+  var sheet = ss.getActiveSheet();
+  sheet.setName("Class Times");
+  sheet.appendRow(CLASSTIMES_HEADERS);
+  sheet.getRange(1, 1, 1, CLASSTIMES_HEADERS.length)
+    .setFontWeight("bold")
+    .setBackground("#0a0a0a")
+    .setFontColor("#d6ff3f");
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidth(1, 160);
+  sheet.setColumnWidth(2, 160);
+  sheet.setColumnWidth(3, 420);
+
+  props.setProperty("CLASSTIMES_SHEET_ID", ss.getId());
+  return ss;
+}
+
+function buildAlignedClassTimesRow(sheet, record) {
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  return headers.map(function(h) {
+    switch (String(h).trim().toLowerCase()) {
+      case "timestamp":              return record.timestamp;
+      case "name":                   return record.name;
+      case "preferred class times":  return record.classTimes;
+      default:                       return "";
+    }
+  });
+}
+
+function handleClassTimes(data) {
+  var ss = getOrCreateClassTimesSpreadsheet();
+  var sheet = ss.getSheetByName("Class Times");
+
+  var record = {
+    timestamp: new Date(),
+    name: data.name || "",
+    classTimes: data.classTimes || ""
+  };
+  sheet.appendRow(buildAlignedClassTimesRow(sheet, record));
+
+  if (NOTIFY_EMAIL) {
+    try {
+      MailApp.sendEmail({
+        to: NOTIFY_EMAIL,
+        subject: "New Hyrox class-time request" + (record.name ? " — " + record.name : ""),
+        htmlBody:
+          "<h3>New class-time request</h3>" +
+          "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
+          row("Name", record.name) +
+          row("Preferred Times", record.classTimes) +
+          "</table>" +
+          "<p><a href='" + ss.getUrl() + "'>View all class-time requests in the spreadsheet</a></p>"
+      });
+    } catch (mailErr) {
+      Logger.log("Class-time email notification failed: " + mailErr);
     }
   }
 
