@@ -145,6 +145,12 @@ function doPost(e) {
       return handleClassTimes(data);
     }
 
+    // September 13, 2026 simulation signups include type:"sim0913" —
+    // their own spreadsheet, shirt orders, and payment instructions.
+    if (data.type === "sim0913") {
+      return handleSim0913(data);
+    }
+
     // Auto-create the spreadsheet on first submission if it doesn't exist yet.
     var ss = getOrCreateSpreadsheet();
     PropertiesService.getScriptProperties().setProperty("SHEET_ID", ss.getId());
@@ -427,8 +433,255 @@ function handleClassTimes(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ── GET: Health check ──
+// ═══════════════════════════════════════════════════════════════
+// SEPTEMBER 13, 2026 SIMULATION  (posted from index.html with type:"sim0913")
+// $25/athlete, shirt included (black tee or crop, custom logo color).
+// Own spreadsheet: "Signups" tab (one row per submission) + "Shirts" tab
+// (one row per athlete, for the print order) + on-demand "Shirt Tally".
+// ═══════════════════════════════════════════════════════════════
+
+var SIM0913_EVENT = "Hyrox Simulation — September 13, 2026";
+var SIM0913_PRICE = 25;
+var SIM0913_VENMO = "kevin-schuetz-5";
+var SIM0913_ZELLE = "kodaironview@gmail.com";
+var SIM0913_ZP_URL = "https://kodaironview.sites.zenplanner.com/retail-product.cfm?ProductId=90E6E4E0-E70A-4AE4-8CA3-540E26683913";
+
+var SIM0913_SIGNUP_HEADERS = [
+  "Timestamp", "Registrant", "Email", "Division", "Weights", "Expected Time",
+  "Home Gym", "Athletes", "Shirts", "Payment Method", "Total Due", "Paid?", "Heat", "Comments"
+];
+var SIM0913_SHIRT_HEADERS = [
+  "Timestamp", "Athlete", "Garment", "Size", "Logo Color", "Registrant", "Division", "Payment Method"
+];
+
+function getOrCreateSim0913Spreadsheet() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty("SIM0913_SHEET_ID");
+  if (id) {
+    try { return SpreadsheetApp.openById(id); } catch (e) { /* fall through and create */ }
+  }
+
+  var ss = SpreadsheetApp.create("Koda Hyrox Simulation Signups — Sept 13 2026");
+  var styleHeader = function(sheet, headers, widths) {
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length)
+      .setFontWeight("bold")
+      .setBackground("#0a0a0a")
+      .setFontColor("#d6ff3f");
+    sheet.setFrozenRows(1);
+    for (var i = 0; i < widths.length; i++) if (widths[i]) sheet.setColumnWidth(i + 1, widths[i]);
+  };
+
+  var signups = ss.getActiveSheet();
+  signups.setName("Signups");
+  styleHeader(signups, SIM0913_SIGNUP_HEADERS,
+    [170, 170, 220, 130, 90, 140, 180, 80, 340, 130, 90, 70, 90, 300]);
+
+  var shirts = ss.insertSheet("Shirts");
+  styleHeader(shirts, SIM0913_SHIRT_HEADERS,
+    [170, 170, 120, 70, 110, 170, 130, 130]);
+
+  props.setProperty("SIM0913_SHEET_ID", ss.getId());
+  return ss;
+}
+
+function sim0913PayHtml(data) {
+  var n = (data.athletes || []).length || 1;
+  var total = n * SIM0913_PRICE;
+  var note = "Hyrox Sim 9/13 — " + (data.firstName || "") + " " + (data.lastName || "");
+  var each = n > 1
+    ? "<p><strong>Each athlete pays their own $" + SIM0913_PRICE + "</strong> (total for your crew: $" + total + "). Please share these instructions with your teammates.</p>"
+    : "";
+  var btn = function(href, label) {
+    return "<p><a href='" + href + "' style='display:inline-block;background:#d6ff3f;color:#000;font-weight:bold;" +
+      "padding:10px 22px;border-radius:8px;text-decoration:none'>" + label + "</a></p>";
+  };
+  if (data.payment === "Venmo") {
+    var venmoUrl = "https://venmo.com/?txn=pay&audience=public&recipients=" + SIM0913_VENMO +
+      "&amount=" + SIM0913_PRICE + "&note=" + encodeURIComponent(note);
+    return "<h3 style='margin-bottom:4px'>Pay with Venmo</h3>" + each +
+      "<p>Send <strong>$" + SIM0913_PRICE + "</strong> to <strong>@" + SIM0913_VENMO + "</strong> with the note \"" + escapeHtml(note) + "\"" +
+      (n > 1 ? " (teammates: use your own name in the note)" : "") + ".</p>" +
+      btn(venmoUrl, "Pay $" + SIM0913_PRICE + " on Venmo →");
+  }
+  if (data.payment === "Zelle") {
+    return "<h3 style='margin-bottom:4px'>Pay with Zelle</h3>" + each +
+      "<p>Send <strong>$" + SIM0913_PRICE + "</strong> via Zelle to <strong>" + SIM0913_ZELLE + "</strong> with \"" + escapeHtml(note) + "\" in the memo" +
+      (n > 1 ? " (teammates: use your own name)" : "") + ".</p>";
+  }
+  return "<h3 style='margin-bottom:4px'>Pay by Credit Card</h3>" + each +
+    "<p>Complete a <strong>$" + SIM0913_PRICE + "</strong> checkout on our secure Zen Planner store" +
+    (n > 1 ? " — one checkout per athlete" : "") + ".</p>" +
+    btn(SIM0913_ZP_URL, "Pay $" + SIM0913_PRICE + " on Zen Planner →");
+}
+
+function handleSim0913(data) {
+  var ss = getOrCreateSim0913Spreadsheet();
+  var signups = ss.getSheetByName("Signups");
+  var shirts = ss.getSheetByName("Shirts");
+
+  var now = new Date();
+  var registrant = (data.firstName || "") + " " + (data.lastName || "");
+  var athletes = data.athletes || [];
+  var total = athletes.length * SIM0913_PRICE;
+  var shirtLines = athletes.map(function(a) {
+    return a.name + " — " + a.garment + " / " + a.size + " / " + a.color;
+  }).join("\n");
+
+  signups.appendRow([
+    now, registrant, data.email || "", data.division || "", data.weights || "",
+    data.expectedTime || "", data.homeGym || "", athletes.length, shirtLines,
+    data.payment || "", "$" + total, "", "", data.comments || ""
+  ]);
+
+  athletes.forEach(function(a) {
+    shirts.appendRow([
+      now, a.name || "", a.garment || "", a.size || "", a.color || "",
+      registrant, data.division || "", data.payment || ""
+    ]);
+  });
+
+  // Inline mockup images (rendered client-side, base64 JPEG)
+  var inlineImages = {};
+  var mockupHtml = "";
+  (data.mockups || []).slice(0, 4).forEach(function(m, i) {
+    try {
+      var key = "mock" + i;
+      inlineImages[key] = Utilities.newBlob(Utilities.base64Decode(m.jpeg), "image/jpeg", key + ".jpg");
+      mockupHtml += "<div style='display:inline-block;margin:6px;text-align:center'>" +
+        "<img src='cid:" + key + "' width='240' style='border-radius:8px;border:1px solid #ddd'><br>" +
+        "<span style='font-size:12px;color:#555'>" + escapeHtml(m.name || "") + "</span></div>";
+    } catch (imgErr) { /* skip bad image */ }
+  });
+
+  var detailsTable =
+    "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
+    row("Event", SIM0913_EVENT) +
+    row("Division", data.division || "") +
+    row("Weights", data.weights || "") +
+    row("Expected Time", data.expectedTime || "") +
+    row("Home Gym", data.homeGym || "") +
+    row("Payment", (data.payment || "") + " — $" + total + (athletes.length > 1 ? " ($" + SIM0913_PRICE + " each)" : "")) +
+    athletes.map(function(a, i) {
+      return row("Athlete " + (i + 1), a.name + " · " + a.garment + " · " + a.size + " · " + a.color + " logo");
+    }).join("") +
+    (data.comments ? row("Comments", data.comments) : "") +
+    "</table>";
+
+  // Confirmation to the registrant
+  if (data.email) {
+    try {
+      MailApp.sendEmail({
+        to: data.email,
+        replyTo: NOTIFY_EMAIL,
+        subject: "You're in! " + SIM0913_EVENT + " — Koda CrossFit Iron View",
+        htmlBody:
+          "<div style='font-family:Arial,sans-serif;max-width:600px'>" +
+          "<h2 style='margin-bottom:4px'>You're in, " + escapeHtml(data.firstName || "") + "!</h2>" +
+          "<p>You're signed up for the <strong>" + SIM0913_EVENT + "</strong> at Koda CrossFit Iron View, " +
+          "740 S Pierce Ave, Louisville, CO. Heats go off every 10 minutes from 9:00 to 11:50 AM — " +
+          "we'll email your heat time before race day.</p>" +
+          "<div style='background:#f6f6f6;border-radius:10px;padding:14px 16px;margin:14px 0'>" + sim0913PayHtml(data) + "</div>" +
+          detailsTable +
+          (mockupHtml ? "<h3 style='margin-top:18px'>Your shirts</h3>" + mockupHtml : "") +
+          "<p style='color:#777;font-size:13px;margin-top:18px'>Questions? Just reply to this email.</p>" +
+          "</div>",
+        inlineImages: inlineImages
+      });
+    } catch (mailErr) {
+      Logger.log("Sim0913 confirmation email failed: " + mailErr);
+    }
+  }
+
+  // Notify the gym
+  if (NOTIFY_EMAIL) {
+    try {
+      MailApp.sendEmail({
+        to: NOTIFY_EMAIL,
+        subject: "New Hyrox Sim 9/13 signup — " + registrant + " (" + (data.division || "") + ", " +
+                 athletes.length + (athletes.length === 1 ? " shirt" : " shirts") + ", " + (data.payment || "") + ")",
+        htmlBody:
+          "<h3>New signup for " + SIM0913_EVENT + "</h3>" +
+          "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
+          row("Registrant", registrant) +
+          row("Email", data.email || "") +
+          "</table>" + detailsTable +
+          (mockupHtml ? "<h3 style='margin-top:16px'>Shirts</h3>" + mockupHtml : "") +
+          "<p><a href='" + ss.getUrl() + "'>View all signups in the spreadsheet</a></p>",
+        inlineImages: inlineImages
+      });
+    } catch (mailErr) {
+      Logger.log("Sim0913 notify email failed: " + mailErr);
+    }
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: "ok" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Rebuild the "Shirt Tally" tab (garment × color × size counts) on demand:
+//   GET  <exec-url>?action=shirtTally0913
+function sim0913ShirtTally() {
+  var ss = getOrCreateSim0913Spreadsheet();
+  var shirts = ss.getSheetByName("Shirts");
+  var rows = shirts.getDataRange().getValues().slice(1);
+
+  var GARMENTS = ["Unisex Tee", "Cropped Tee"];
+  var SIZES = { "Unisex Tee": ["XS","S","M","L","XL","2XL","3XL"], "Cropped Tee": ["S","M","L","XL","2XL"] };
+  var COLORS = ["Gold","Hot Pink","Lime Green","Bright Blue","Lavender","Red","Orange","Silver","White"];
+
+  var counts = {}; // garment|color|size -> n
+  var totalShirts = 0;
+  rows.forEach(function(r) {
+    var athlete = String(r[1] || ""), garment = String(r[2] || ""), size = String(r[3] || ""), color = String(r[4] || "");
+    var reg = String(r[5] || "");
+    if (/test/i.test(athlete) || /test/i.test(reg)) return; // skip test rows
+    if (!garment) return;
+    var k = garment + "|" + color + "|" + size;
+    counts[k] = (counts[k] || 0) + 1;
+    totalShirts++;
+  });
+
+  var old = ss.getSheetByName("Shirt Tally");
+  if (old) ss.deleteSheet(old);
+  var tally = ss.insertSheet("Shirt Tally");
+
+  var rowsOut = [["Garment", "Logo Color"].concat(SIZES["Unisex Tee"]).concat(["Total"])];
+  GARMENTS.forEach(function(g) {
+    COLORS.forEach(function(c) {
+      var line = [g, c];
+      var sum = 0;
+      SIZES["Unisex Tee"].forEach(function(s) {
+        var n = (SIZES[g].indexOf(s) !== -1) ? (counts[g + "|" + c + "|" + s] || 0) : "";
+        line.push(n === "" ? "" : n);
+        sum += (n || 0);
+      });
+      line.push(sum);
+      if (sum > 0) rowsOut.push(line);
+    });
+  });
+  rowsOut.push([]);
+  rowsOut.push(["TOTAL SHIRTS", "", "", "", "", "", "", "", "", totalShirts]);
+
+  tally.getRange(1, 1, rowsOut.length, rowsOut[0].length).setValues(rowsOut.map(function(r) {
+    while (r.length < rowsOut[0].length) r.push("");
+    return r;
+  }));
+  tally.getRange(1, 1, 1, rowsOut[0].length)
+    .setFontWeight("bold").setBackground("#0a0a0a").setFontColor("#d6ff3f");
+  tally.setFrozenRows(1);
+  return { status: "ok", shirts: totalShirts, rows: rowsOut.length - 3 };
+}
+
+// ── GET: Health check + on-demand actions ──
 function doGet(e) {
+  var action = e && e.parameter ? e.parameter.action : "";
+  if (action === "shirtTally0913") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913ShirtTally()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   return ContentService
     .createTextOutput(JSON.stringify({ status: "ok", message: "Hyrox Simulation signup API running" }))
     .setMimeType(ContentService.MimeType.JSON);

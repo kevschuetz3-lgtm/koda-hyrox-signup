@@ -1,6 +1,20 @@
 # Koda Hyrox Simulation — Signup Site
 
-Single-page signup form for the Hyrox Simulation event at Koda CrossFit Iron View on **June 7, 2026**. Submissions go to a Google Sheet via a Google Apps Script web app.
+Single-page signup form for the Hyrox Simulation at Koda CrossFit Iron View on **September 13, 2026** (heats every 10 min, 9:00–11:50 AM). **$25 per athlete, event shirt included** — each athlete picks black unisex tee or black crop and one of 9 logo colors (live mockup preview). Payment: Venmo / Zelle / credit card (Zen Planner). Submissions go to a Google Sheet via the same Google Apps Script web app used for the June 2026 event.
+
+## September 13, 2026 event — how it works
+
+- `index.html` posts `type: "sim0913"` to the existing web app (same `/exec` URL as June).
+- The backend writes to its **own** spreadsheet, "Koda Hyrox Simulation Signups — Sept 13 2026" (script property `SIM0913_SHEET_ID`, auto-created on first submission): a **Signups** tab (one row per submission, incl. Paid?/Heat columns to fill by hand) and a **Shirts** tab (one row per athlete — the print order).
+- Registrant gets a confirmation email with payment instructions + canvas-rendered shirt mockups; kevschuetz3@gmail.com gets a notification.
+- **Shirt tally for the printer:** open `<exec-url>?action=shirtTally0913` — rebuilds a "Shirt Tally" tab (garment × color × size, skips rows with "test" in a name). When emailing the printer, CC lasakcatherine@gmail.com.
+- Shirt mockup assets live in `assets/mockups/` (`*-base.jpg` = garment with logo removed, `*-mask.png` = logo alpha mask tinted live). Vinyl hexes were sampled from the exact HTVRONT Amazon listings; Gold + Silver render as metallic gradients.
+- Divisions (Singles / Doubles / Team of 4 Relay), weight categories, and expected-time heat placement carry over from June. **No capacity caps are enforced** — ask Claude to add caps if needed.
+- `feedback.html` and `class-times.html` are left over from the June event (unlinked but live).
+
+---
+
+## June 7, 2026 event (previous — kept for reference)
 
 ## Files
 

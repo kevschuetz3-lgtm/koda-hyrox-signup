@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hyrox Simulation — Koda CrossFit Iron View</title>
-  <meta name="description" content="Sign up for the Hyrox Simulation event at Koda CrossFit Iron View on June 7, 2026. Cookout to follow, sponsored by Pasture Provisions.">
+  <title>Hyrox Simulation — Koda CrossFit Iron View — September 13, 2026</title>
+  <meta name="description" content="Sign up for the Hyrox Simulation at Koda CrossFit Iron View on September 13, 2026. $25 entry includes a custom event shirt — pick your logo color. Heats every 10 minutes, 9:00–11:50 AM.">
   <link rel="icon" type="image/png" href="assets/koda-mark.png">
   <link rel="apple-touch-icon" href="assets/koda-mark.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -88,8 +88,8 @@
 
     h1.hero-title .accent { color: var(--accent); }
 
-    /* ── Free badge ── */
-    .free-badge {
+    /* ── Price badge ── */
+    .price-badge {
       display: inline-flex;
       align-items: center;
       gap: 10px;
@@ -102,33 +102,33 @@
       border-radius: 999px;
       margin-bottom: 18px;
       box-shadow: 0 0 0 4px rgba(214,255,63,0.18), 0 4px 16px rgba(214,255,63,0.25);
-      animation: free-pulse 2.4s ease-in-out infinite;
+      animation: badge-pulse 2.4s ease-in-out infinite;
     }
 
-    .free-badge .dot {
+    .price-badge .dot {
       width: 8px;
       height: 8px;
       background: #000;
       border-radius: 50%;
     }
 
-    @keyframes free-pulse {
+    @keyframes badge-pulse {
       0%, 100% { box-shadow: 0 0 0 4px rgba(214,255,63,0.18), 0 4px 16px rgba(214,255,63,0.25); }
       50%      { box-shadow: 0 0 0 8px rgba(214,255,63,0.10), 0 6px 22px rgba(214,255,63,0.40); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .free-badge { animation: none; }
+      .price-badge { animation: none; }
     }
 
     .hero-sub {
-      max-width: 620px;
+      max-width: 640px;
       margin: 0 auto 28px;
       color: var(--muted);
       font-size: 1.05rem;
     }
 
-    .hero-sub .free-text {
+    .hero-sub .shirt-text {
       color: var(--accent);
       font-weight: 700;
     }
@@ -159,7 +159,7 @@
 
     /* ── Container ── */
     .container {
-      max-width: 720px;
+      max-width: 760px;
       margin: 0 auto;
       padding: 40px 20px 64px;
     }
@@ -175,42 +175,6 @@
     }
 
     .info-card strong { color: var(--accent); }
-
-    /* ── Waitlist banner (top of page) ── */
-    .waitlist-banner {
-      background: var(--accent);
-      color: #0a0a0a;
-      text-align: center;
-      padding: 12px 20px;
-      font-family: 'Bebas Neue', sans-serif;
-      letter-spacing: 0.08em;
-      font-size: 1rem;
-      border-bottom: 2px solid var(--accent-dark);
-    }
-    .waitlist-banner strong { font-weight: 700; }
-    .waitlist-banner .banner-sub {
-      display: block;
-      font-family: 'Inter', sans-serif;
-      font-weight: 500;
-      letter-spacing: 0.01em;
-      font-size: 0.85rem;
-      margin-top: 4px;
-      opacity: 0.85;
-    }
-
-    /* ── Waitlist note (under submit button) ── */
-    .waitlist-note {
-      margin-top: 14px;
-      padding: 14px 16px;
-      background: rgba(214,255,63,0.08);
-      border: 1px solid var(--accent-dark);
-      border-radius: 10px;
-      color: var(--text);
-      font-size: 0.9rem;
-      text-align: center;
-      line-height: 1.5;
-    }
-    .waitlist-note strong { color: var(--accent); }
 
     /* ── Form ── */
     form {
@@ -231,6 +195,12 @@
     }
 
     .form-section-title:not(:first-child) { margin-top: 28px; }
+
+    .section-hint {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin: -10px 0 14px;
+    }
 
     .field { margin-bottom: 16px; }
 
@@ -353,19 +323,187 @@
       color: var(--accent);
     }
 
-    /* ── Conditional partner/team block ── */
-    .conditional {
-      display: none;
-      margin-top: 16px;
-      padding: 16px;
+    /* ── Athlete shirt cards ── */
+    .athlete-card {
       background: var(--panel-2);
-      border: 1px dashed var(--border);
-      border-radius: 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 16px;
+      margin-bottom: 18px;
     }
 
-    .conditional.show { display: block; }
+    .athlete-card:last-child { margin-bottom: 0; }
 
-    .conditional .field:last-child { margin-bottom: 0; }
+    .athlete-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .athlete-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.15rem;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+    }
+
+    .athlete-you {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .shirt-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 640px) {
+      .shirt-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    /* mockup preview */
+    .mock-wrap {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #f5f5f5;
+      border: 1px solid var(--border);
+    }
+
+    .mock {
+      position: relative;
+      width: 100%;
+    }
+
+    .mock img.base {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .mock .ink {
+      position: absolute;
+      inset: 0;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+      pointer-events: none;
+    }
+
+    .mock-caption {
+      position: absolute;
+      left: 8px;
+      bottom: 8px;
+      background: rgba(0,0,0,0.72);
+      color: #fff;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 9px;
+      border-radius: 6px;
+      pointer-events: none;
+    }
+
+    .shirt-controls .field { margin-bottom: 14px; }
+
+    .garment-group {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    /* color swatches */
+    .swatch-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .swatch {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.18);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .swatch:hover { transform: scale(1.08); }
+
+    .swatch.sel {
+      box-shadow: 0 0 0 2px #0a0a0a, 0 0 0 4px var(--accent);
+      border-color: transparent;
+    }
+
+    .swatch .tick {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    .swatch.sel .tick { display: flex; }
+
+    .swatch-name {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .swatch-name strong { color: var(--text); font-weight: 600; }
+
+    /* ── Payment cards ── */
+    .pay-note {
+      margin-top: 12px;
+      padding: 13px 15px;
+      background: rgba(214,255,63,0.07);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      font-size: 0.88rem;
+      color: var(--text);
+      display: none;
+    }
+
+    .pay-note.show { display: block; }
+
+    .pay-note code {
+      background: #000;
+      padding: 1px 7px;
+      border-radius: 5px;
+      color: var(--accent);
+      font-size: 0.85em;
+    }
+
+    .bill-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      font-size: 0.95rem;
+    }
+
+    .bill-line .amt {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+    }
 
     /* ── Weights reference graphic ── */
     .weights-ref {
@@ -455,7 +593,6 @@
       cursor: default;
     }
 
-    /* On narrow screens, let the image show at a larger size with horizontal scroll */
     @media (max-width: 700px) {
       .lightbox-img {
         max-width: none;
@@ -567,7 +704,7 @@
       margin-bottom: 8px;
     }
 
-    .success-msg p {
+    .success-msg > p {
       color: var(--muted);
       margin-bottom: 24px;
     }
@@ -576,8 +713,8 @@
       background: var(--panel-2);
       border-radius: 8px;
       padding: 16px;
-      margin: 0 auto 24px;
-      max-width: 380px;
+      margin: 0 auto 20px;
+      max-width: 440px;
       text-align: left;
       font-size: 0.9rem;
     }
@@ -585,6 +722,7 @@
     .success-details .row {
       display: flex;
       justify-content: space-between;
+      gap: 14px;
       padding: 4px 0;
     }
 
@@ -593,7 +731,52 @@
       text-transform: uppercase;
       font-size: 0.75rem;
       letter-spacing: 0.05em;
+      white-space: nowrap;
     }
+
+    .success-details .row .val { text-align: right; }
+
+    .success-pay {
+      background: rgba(214,255,63,0.07);
+      border: 1px solid var(--accent-dark);
+      border-radius: 10px;
+      padding: 18px;
+      margin: 0 auto 24px;
+      max-width: 440px;
+      text-align: left;
+      font-size: 0.92rem;
+    }
+
+    .success-pay h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 0.08em;
+      font-size: 1.2rem;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .success-pay code {
+      background: #000;
+      padding: 1px 7px;
+      border-radius: 5px;
+      color: var(--accent);
+      font-size: 0.85em;
+    }
+
+    .pay-btn {
+      display: inline-block;
+      margin-top: 12px;
+      background: var(--accent);
+      color: #000;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.05rem;
+      letter-spacing: 0.1em;
+      padding: 10px 22px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+
+    .pay-btn:hover { background: var(--accent-dark); }
 
     .submit-another-btn {
       background: transparent;
@@ -622,78 +805,6 @@
 
     footer a { color: var(--accent); text-decoration: none; }
     footer a:hover { text-decoration: underline; }
-
-    .sponsor-note {
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin-top: 6px;
-    }
-
-    .sponsor-note strong { color: var(--text); }
-
-    /* ── Sponsor section ── */
-    .sponsor-section {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 48px 20px 24px;
-      text-align: center;
-    }
-
-    .sponsor-label {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 0.95rem;
-      letter-spacing: 0.25em;
-      color: var(--muted);
-      margin-bottom: 16px;
-    }
-
-    .sponsor-card {
-      display: inline-flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 14px;
-      background: #fafafa;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 28px 36px 24px;
-      text-decoration: none;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    }
-
-    .sponsor-card:hover {
-      transform: translateY(-2px);
-      border-color: var(--accent);
-      box-shadow: 0 6px 24px rgba(214,255,63,0.15);
-    }
-
-    .sponsor-card img {
-      max-width: 260px;
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-
-    .sponsor-card .visit-link {
-      font-size: 0.8rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #555;
-      font-weight: 600;
-    }
-
-    .sponsor-card:hover .visit-link {
-      color: #000;
-    }
-
-    .sponsor-tagline {
-      margin-top: 16px;
-      font-size: 0.9rem;
-      color: var(--muted);
-      max-width: 480px;
-      margin-left: auto;
-      margin-right: auto;
-    }
 
     /* ── Loading ── */
     .loading {
@@ -727,46 +838,40 @@
       .container { padding: 28px 14px 48px; }
       form { padding: 22px 18px; }
       .event-meta { gap: 10px 18px; }
+      .swatch { width: 36px; height: 36px; }
     }
   </style>
 </head>
 <body>
-
-  <!-- ═══ WAITLIST BANNER ═══ -->
-  <div class="waitlist-banner">
-    <strong>SIGN-UPS FROZEN — WAITLIST ONLY</strong>
-    <span class="banner-sub">Due to popularity, sign-ups are temporarily closed. We're working to see if we can accommodate more athletes.</span>
-  </div>
 
   <!-- ═══ HERO ═══ -->
   <section class="hero">
     <img class="koda-mark" src="assets/koda-mark.png" alt="Koda">
     <span class="eyebrow">KODA CROSSFIT IRON VIEW</span>
     <h1 class="hero-title">HYROX <span class="accent">SIMULATION</span></h1>
-    <div class="free-badge"><span class="dot"></span>FREE EVENT<span class="dot"></span></div>
-    <p class="hero-sub"><span class="free-text">100% free to enter</span> — race-day conditions, real format, cookout to follow.</p>
+    <div class="price-badge"><span class="dot"></span>$25 — SHIRT INCLUDED<span class="dot"></span></div>
+    <p class="hero-sub">Race-day conditions, real format. <span class="shirt-text">Every entry includes a custom event shirt</span> — pick your logo color when you sign up.</p>
 
     <div class="event-meta">
       <div class="meta-item">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Sunday, June 7, 2026
+        Sunday, September 13, 2026
       </div>
       <div class="meta-item">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        10:00 AM – 1:00 PM
+        Heats every 10 min &middot; 9:00 – 11:50 AM
       </div>
       <div class="meta-item">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
         740 S Pierce Ave, Louisville, CO
       </div>
     </div>
-    <p class="sponsor-note">Cookout at 1 PM &middot; Sponsored by <strong>Pasture Provisions</strong></p>
   </section>
 
   <!-- ═══ FORM ═══ -->
   <main class="container">
     <div class="info-card" id="infoCard">
-      <strong>Free to enter &middot; Spots are limited</strong> — no registration fee, just sign up below to lock in your division. Choose Singles, Doubles, or a 4-person Relay, plus your weight category (Pro, Open, or Scaled).
+      <strong>$25 per athlete &middot; event shirt included.</strong> Choose Singles, Doubles, or a 4-person Relay — on a team, <strong>every athlete pays $25 and every athlete gets a shirt</strong>. Heats go off every 10 minutes from 9:00 to 11:50 AM; we'll assign your heat from your expected finish time and email it before race day.
     </div>
 
     <form id="signupForm" novalidate>
@@ -802,42 +907,22 @@
             <input type="radio" name="division" value="Doubles" required>
             <div class="card-inner">
               <span class="card-title">DOUBLES</span>
-              <span class="card-sub">2-person team</span>
+              <span class="card-sub">2-person team &middot; $25 each</span>
             </div>
           </label>
           <label class="radio-card">
             <input type="radio" name="division" value="Team of 4 Relay" required>
             <div class="card-inner">
               <span class="card-title">TEAM RELAY</span>
-              <span class="card-sub">4-person relay</span>
+              <span class="card-sub">4-person relay &middot; $25 each</span>
             </div>
           </label>
         </div>
-
-        <!-- Conditional Doubles -->
-        <div class="conditional" id="doublesFields">
-          <div class="field">
-            <label for="partnerName">Partner's Name <span class="req">*</span></label>
-            <input type="text" id="partnerName" name="partnerName" placeholder="Full name">
-          </div>
-        </div>
-
-        <!-- Conditional Team -->
-        <div class="conditional" id="teamFields">
-          <div class="field">
-            <label for="teammate1">Teammate 1 <span class="req">*</span></label>
-            <input type="text" id="teammate1" name="teammate1" placeholder="Full name">
-          </div>
-          <div class="field">
-            <label for="teammate2">Teammate 2 <span class="req">*</span></label>
-            <input type="text" id="teammate2" name="teammate2" placeholder="Full name">
-          </div>
-          <div class="field">
-            <label for="teammate3">Teammate 3 <span class="req">*</span></label>
-            <input type="text" id="teammate3" name="teammate3" placeholder="Full name">
-          </div>
-        </div>
       </div>
+
+      <div class="form-section-title">Your Shirts</div>
+      <p class="section-hint" id="shirtHint">Every athlete gets the event shirt — black tee or black crop, your choice of logo color. The preview updates live.</p>
+      <div id="athleteCards"><!-- built by JS --></div>
 
       <div class="form-section-title">Weight Category</div>
       <div class="field">
@@ -894,38 +979,58 @@
         <input type="text" id="homeGym" name="homeGym" required autocomplete="organization" placeholder="e.g. Koda CrossFit Iron View">
       </div>
 
+      <div class="form-section-title">Payment</div>
+      <div class="bill-line">
+        <span id="billText">1 athlete × $25</span>
+        <span class="amt" id="billAmt">$25</span>
+      </div>
+      <div class="field">
+        <div class="radio-group" role="radiogroup" aria-label="Payment method">
+          <label class="radio-card">
+            <input type="radio" name="payment" value="Venmo" required>
+            <div class="card-inner">
+              <span class="card-title">VENMO</span>
+              <span class="card-sub">@kevin-schuetz-5</span>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="payment" value="Zelle" required>
+            <div class="card-inner">
+              <span class="card-title">ZELLE</span>
+              <span class="card-sub">kodaironview@gmail.com</span>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="payment" value="Credit Card" required>
+            <div class="card-inner">
+              <span class="card-title">CREDIT CARD</span>
+              <span class="card-sub">Secure online checkout</span>
+            </div>
+          </label>
+        </div>
+        <div class="pay-note" id="payNote"></div>
+      </div>
+
       <div class="form-section-title">Anything Else?</div>
       <div class="field">
         <label for="comments">Comments or Questions</label>
         <textarea id="comments" name="comments" placeholder="Optional — let us know if you have any questions or special requests."></textarea>
       </div>
 
-      <button type="submit" class="submit-btn" id="submitBtn">ADD ME TO THE WAIT LIST</button>
-      <div class="waitlist-note">
-        <strong>Sign-ups are currently frozen.</strong><br>
-        Due to popularity and the amount of sign-ups, we've paused registration. We're working to see if we can accommodate more athletes — add yourself to the waitlist and we'll be in touch.
-      </div>
+      <button type="submit" class="submit-btn" id="submitBtn">SIGN ME UP</button>
       <div class="form-error" id="formError"></div>
     </form>
 
     <div class="success-msg" id="successMsg">
       <div class="success-check">✓</div>
-      <h2>YOU'RE ON THE WAITLIST!</h2>
-      <p>We've got your info. Sign-ups are currently frozen, but we're working to see if we can accommodate more athletes.<br><br>If a spot opens up, we'll reach out by email — please keep an eye on your inbox.</p>
+      <h2>YOU'RE IN!</h2>
+      <p id="successLead">Your signup is locked in. One last step — payment.</p>
+      <div class="success-pay" id="successPay"></div>
       <div class="success-details" id="successDetails"></div>
-      <button class="submit-another-btn" onclick="resetForm()">Add another athlete</button>
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:24px;">We'll email your heat time before race day. A confirmation with your shirt order is on its way to your inbox.</p>
+      <button class="submit-another-btn" onclick="resetForm()">Submit another signup</button>
     </div>
   </main>
-
-  <!-- ═══ SPONSOR ═══ -->
-  <section class="sponsor-section">
-    <div class="sponsor-label">COOKOUT SPONSORED BY</div>
-    <a class="sponsor-card" href="https://pastureprovisionsco.com/" target="_blank" rel="noopener">
-      <img src="https://pastureprovisionsco.com/cdn/shop/files/PP-Primary-Logo-Black-Web.png?width=520" alt="Pasture Provisions Co" loading="lazy">
-      <span class="visit-link">Visit pastureprovisionsco.com →</span>
-    </a>
-    <p class="sponsor-tagline">100% Colorado-raised, grass-fed beef &amp; lamb, heritage pork, and pasture-raised chicken — delivered farm-to-table.</p>
-  </section>
 
   <footer>
     Koda CrossFit Iron View &middot; 740 S Pierce Ave, Louisville, CO 80027<br>
@@ -934,32 +1039,342 @@
 
   <div class="loading" id="loadingOverlay">
     <div class="spinner"></div>
-    <div>Submitting...</div>
+    <div id="loadingText">Submitting...</div>
   </div>
 
   <!-- ═══ LIGHTBOX ═══ -->
-  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Weights reference">
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview">
     <button class="lightbox-close" id="lightboxClose" aria-label="Close">×</button>
     <img class="lightbox-img" id="lightboxImg" src="" alt="">
   </div>
 
   <script>
     // ══════════════════════════════════════════════════
-    // CONFIGURATION — Replace with your deployed Apps Script URL
+    // CONFIGURATION
     // ══════════════════════════════════════════════════
     var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWjHrhE6k3vVPDXD4qi3VLxZVAXMykAFIKocoUiq0BtXdv2XLy7Oo0GRfrP48fHytnyw/exec";
+    var PRICE = 25;
+    var VENMO_USERNAME = 'kevin-schuetz-5';
+    var ZELLE_EMAIL = 'kodaironview@gmail.com';
+    var ZEN_PLANNER_CHECKOUT_URL = 'https://kodaironview.sites.zenplanner.com/retail-product.cfm?ProductId=90E6E4E0-E70A-4AE4-8CA3-540E26683913';
 
-    // ── Conditional partner/team field display ──
-    var divisionRadios = document.querySelectorAll('input[name="division"]');
-    var doublesFields = document.getElementById('doublesFields');
-    var teamFields = document.getElementById('teamFields');
+    // Vinyl colors — sampled from the exact HTVRONT rolls being ordered.
+    // Gold + Silver are chrome vinyls, rendered as vertical metallic gradients.
+    var COLORS = [
+      { id: 'gold',     name: 'Gold',        stops: ['#FFE9A2', '#FED968', '#D9A62E'] },
+      { id: 'pink',     name: 'Hot Pink',    hex: '#FA5C8F' },
+      { id: 'lime',     name: 'Lime Green',  hex: '#5BF94C' },
+      { id: 'blue',     name: 'Bright Blue', hex: '#3A9EF4' },
+      { id: 'lavender', name: 'Lavender',    hex: '#E6D5FF' },
+      { id: 'red',      name: 'Red',         hex: '#F3222B' },
+      { id: 'orange',   name: 'Orange',      hex: '#FF7244' },
+      { id: 'silver',   name: 'Silver',      stops: ['#F6F6F5', '#DDDDDB', '#A9ABAE'] },
+      { id: 'white',    name: 'White',       hex: '#FFFFFF' }
+    ];
 
-    divisionRadios.forEach(function(r) {
-      r.addEventListener('change', function() {
-        doublesFields.classList.toggle('show', r.value === 'Doubles' && r.checked);
-        teamFields.classList.toggle('show', r.value === 'Team of 4 Relay' && r.checked);
+    // logoY = vertical span of the wordmark in the frame (for gradient placement)
+    var GARMENTS = {
+      tee:  { name: 'Unisex Tee',  sub: 'Bella+Canvas 3001', sizes: ['XS','S','M','L','XL','2XL','3XL'],
+              base: 'assets/mockups/tee-base.jpg',  mask: 'assets/mockups/tee-mask.png',  logoY: [0.327, 0.380] },
+      crop: { name: 'Cropped Tee', sub: 'Bella+Canvas 8882', sizes: ['S','M','L','XL','2XL'],
+              base: 'assets/mockups/crop-base.jpg', mask: 'assets/mockups/crop-mask.png', logoY: [0.410, 0.481] }
+    };
+
+    var DIVISION_COUNT = { 'Singles': 1, 'Doubles': 2, 'Team of 4 Relay': 4 };
+
+    // ── State ──
+    var athletes = [ newAthlete() ];
+
+    function newAthlete() {
+      return { name: '', garment: 'tee', size: '', colorId: 'lime' };
+    }
+
+    function colorById(id) {
+      for (var i = 0; i < COLORS.length; i++) if (COLORS[i].id === id) return COLORS[i];
+      return COLORS[2];
+    }
+
+    function cssFill(color, garment) {
+      if (color.stops) {
+        var y = GARMENTS[garment].logoY;
+        var mid = ((y[0] + y[1]) / 2 * 100).toFixed(1);
+        return 'linear-gradient(180deg, ' + color.stops[0] + ' ' + (y[0] * 100).toFixed(1) + '%, ' +
+               color.stops[1] + ' ' + mid + '%, ' + color.stops[2] + ' ' + (y[1] * 100).toFixed(1) + '%)';
+      }
+      return color.hex;
+    }
+
+    function swatchFill(color) {
+      return color.stops
+        ? 'linear-gradient(135deg, ' + color.stops[0] + ', ' + color.stops[1] + ' 55%, ' + color.stops[2] + ')'
+        : color.hex;
+    }
+
+    // ── Athlete cards ──
+    var cardsWrap = document.getElementById('athleteCards');
+
+    function currentDivision() {
+      var r = document.querySelector('input[name="division"]:checked');
+      return r ? r.value : 'Singles';
+    }
+
+    function athleteCount() { return DIVISION_COUNT[currentDivision()] || 1; }
+
+    function syncAthleteArray() {
+      var n = athleteCount();
+      while (athletes.length < n) athletes.push(newAthlete());
+      athletes.length = n;
+    }
+
+    function registrantName() {
+      var f = document.getElementById('firstName').value.trim();
+      var l = document.getElementById('lastName').value.trim();
+      return (f + ' ' + l).trim();
+    }
+
+    function buildCards() {
+      syncAthleteArray();
+      cardsWrap.innerHTML = '';
+      athletes.forEach(function(a, i) {
+        var card = document.createElement('div');
+        card.className = 'athlete-card';
+        card.dataset.idx = i;
+
+        var head = document.createElement('div');
+        head.className = 'athlete-head';
+        var label = document.createElement('span');
+        label.className = 'athlete-num';
+        label.id = 'athleteLabel' + i;
+        head.appendChild(label);
+        if (i === 0) {
+          var you = document.createElement('span');
+          you.className = 'athlete-you';
+          you.textContent = "That's you";
+          head.appendChild(you);
+        }
+        card.appendChild(head);
+
+        // teammate name input (athlete 1 uses the form's name fields)
+        if (i > 0) {
+          var nf = document.createElement('div');
+          nf.className = 'field';
+          nf.innerHTML = '<label for="athleteName' + i + '">' +
+            (currentDivision() === 'Doubles' ? "Partner's Name" : 'Teammate ' + i + ' Name') +
+            ' <span class="req">*</span></label>';
+          var inp = document.createElement('input');
+          inp.type = 'text';
+          inp.id = 'athleteName' + i;
+          inp.placeholder = 'Full name';
+          inp.value = a.name;
+          inp.addEventListener('input', function() {
+            a.name = inp.value.trim();
+            updateLabel(i);
+          });
+          nf.appendChild(inp);
+          card.appendChild(nf);
+        }
+
+        var grid = document.createElement('div');
+        grid.className = 'shirt-grid';
+
+        // mockup
+        var mockWrap = document.createElement('div');
+        mockWrap.className = 'mock-wrap';
+        mockWrap.innerHTML =
+          '<div class="mock" id="mock' + i + '">' +
+            '<img class="base" id="mockBase' + i + '" alt="Shirt mockup">' +
+            '<div class="ink" id="mockInk' + i + '"></div>' +
+          '</div>' +
+          '<span class="mock-caption" id="mockCap' + i + '"></span>';
+        grid.appendChild(mockWrap);
+
+        // controls
+        var controls = document.createElement('div');
+        controls.className = 'shirt-controls';
+
+        // garment
+        var gf = document.createElement('div');
+        gf.className = 'field';
+        gf.innerHTML = '<label>Garment <span class="req">*</span></label>';
+        var gg = document.createElement('div');
+        gg.className = 'garment-group';
+        Object.keys(GARMENTS).forEach(function(gid) {
+          var g = GARMENTS[gid];
+          var lab = document.createElement('label');
+          lab.className = 'radio-card';
+          lab.innerHTML =
+            '<input type="radio" name="garment' + i + '" value="' + gid + '"' + (a.garment === gid ? ' checked' : '') + '>' +
+            '<div class="card-inner"><span class="card-title">' + g.name.toUpperCase() + '</span>' +
+            '<span class="card-sub">' + g.sub + ' &middot; Black</span></div>';
+          lab.querySelector('input').addEventListener('change', function() {
+            a.garment = gid;
+            if (GARMENTS[gid].sizes.indexOf(a.size) === -1) a.size = '';
+            renderSizes(i);
+            paintMock(i);
+          });
+          gg.appendChild(lab);
+        });
+        gf.appendChild(gg);
+        controls.appendChild(gf);
+
+        // size
+        var sf = document.createElement('div');
+        sf.className = 'field';
+        sf.innerHTML = '<label for="size' + i + '">Size <span class="req">*</span></label>';
+        var sel = document.createElement('select');
+        sel.id = 'size' + i;
+        sel.addEventListener('change', function() { a.size = sel.value; });
+        sf.appendChild(sel);
+        controls.appendChild(sf);
+
+        // color swatches
+        var cf = document.createElement('div');
+        cf.className = 'field';
+        cf.innerHTML = '<label>Logo Color <span class="req">*</span></label>';
+        var row = document.createElement('div');
+        row.className = 'swatch-row';
+        COLORS.forEach(function(c) {
+          var sw = document.createElement('div');
+          sw.className = 'swatch' + (a.colorId === c.id ? ' sel' : '');
+          sw.dataset.color = c.id;
+          sw.title = c.name;
+          sw.setAttribute('role', 'button');
+          sw.setAttribute('aria-label', c.name);
+          sw.tabIndex = 0;
+          sw.style.background = swatchFill(c);
+          var dark = (c.id === 'white' || c.id === 'silver' || c.id === 'lavender' || c.id === 'gold');
+          sw.innerHTML = '<span class="tick" style="color:' + (dark ? '#000' : '#fff') + '">✓</span>';
+          function pick() {
+            a.colorId = c.id;
+            row.querySelectorAll('.swatch').forEach(function(el) { el.classList.remove('sel'); });
+            sw.classList.add('sel');
+            nameEl.innerHTML = 'Selected: <strong>' + c.name + '</strong>';
+            paintMock(i);
+          }
+          sw.addEventListener('click', pick);
+          sw.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+          row.appendChild(sw);
+        });
+        cf.appendChild(row);
+        var nameEl = document.createElement('div');
+        nameEl.className = 'swatch-name';
+        nameEl.innerHTML = 'Selected: <strong>' + colorById(a.colorId).name + '</strong>';
+        cf.appendChild(nameEl);
+        controls.appendChild(cf);
+
+        grid.appendChild(controls);
+        card.appendChild(grid);
+        cardsWrap.appendChild(card);
+
+        renderSizes(i);
+        paintMock(i);
+        updateLabel(i);
       });
+      updateBill();
+    }
+
+    function renderSizes(i) {
+      var a = athletes[i];
+      var sel = document.getElementById('size' + i);
+      var g = GARMENTS[a.garment];
+      sel.innerHTML = '<option value="">— Select size —</option>' +
+        g.sizes.map(function(s) { return '<option value="' + s + '"' + (a.size === s ? ' selected' : '') + '>' + s + '</option>'; }).join('');
+    }
+
+    function updateLabel(i) {
+      var a = athletes[i];
+      var el = document.getElementById('athleteLabel' + i);
+      if (!el) return;
+      var nm = i === 0 ? registrantName() : a.name;
+      el.textContent = 'ATHLETE ' + (i + 1) + (nm ? ' — ' + nm.toUpperCase() : '');
+    }
+
+    function paintMock(i) {
+      var a = athletes[i];
+      var g = GARMENTS[a.garment];
+      var c = colorById(a.colorId);
+      document.getElementById('mockBase' + i).src = g.base;
+      var ink = document.getElementById('mockInk' + i);
+      ink.style.webkitMaskImage = 'url(' + g.mask + ')';
+      ink.style.maskImage = 'url(' + g.mask + ')';
+      ink.style.background = cssFill(c, a.garment);
+      document.getElementById('mockCap' + i).textContent = g.name + ' · ' + c.name;
+    }
+
+    // ── Bill + payment note ──
+    function updateBill() {
+      var n = athleteCount();
+      document.getElementById('billText').textContent = n + (n === 1 ? ' athlete' : ' athletes') + ' × $' + PRICE +
+        (n > 1 ? ' — each athlete pays their own $' + PRICE : '');
+      document.getElementById('billAmt').textContent = '$' + (n * PRICE);
+      updatePayNote();
+    }
+
+    function updatePayNote() {
+      var note = document.getElementById('payNote');
+      var sel = document.querySelector('input[name="payment"]:checked');
+      if (!sel) { note.classList.remove('show'); return; }
+      var n = athleteCount();
+      var each = n > 1 ? 'Each of your ' + n + ' athletes pays their own $' + PRICE + '. ' : '';
+      var html = '';
+      if (sel.value === 'Venmo') {
+        html = each + 'After you submit, you\'ll get a one-tap Venmo link to <code>@' + VENMO_USERNAME + '</code> with the amount and note pre-filled' + (n > 1 ? ' — share it with your crew' : '') + '.';
+      } else if (sel.value === 'Zelle') {
+        html = each + 'Send via Zelle to <code>' + ZELLE_EMAIL + '</code> with your name' + (n > 1 ? 's' : '') + ' in the note. Full instructions after you submit.';
+      } else {
+        html = each + 'You\'ll get a secure Zen Planner checkout link after you submit' + (n > 1 ? ' — each athlete completes their own $' + PRICE + ' checkout' : '') + '.';
+      }
+      note.innerHTML = html;
+      note.classList.add('show');
+    }
+
+    // ── Wiring ──
+    document.querySelectorAll('input[name="division"]').forEach(function(r) {
+      r.addEventListener('change', buildCards);
     });
+    document.querySelectorAll('input[name="payment"]').forEach(function(r) {
+      r.addEventListener('change', updatePayNote);
+    });
+    document.getElementById('firstName').addEventListener('input', function() { updateLabel(0); });
+    document.getElementById('lastName').addEventListener('input', function() { updateLabel(0); });
+
+    // ── Canvas mockup render (for confirmation email) ──
+    var imgCache = {};
+    function loadImg(src) {
+      return new Promise(function(ok, err) {
+        if (imgCache[src]) return ok(imgCache[src]);
+        var im = new Image();
+        im.onload = function() { imgCache[src] = im; ok(im); };
+        im.onerror = err;
+        im.src = src;
+      });
+    }
+
+    function renderMockJpeg(athlete) {
+      var g = GARMENTS[athlete.garment];
+      var c = colorById(athlete.colorId);
+      return Promise.all([loadImg(g.base), loadImg(g.mask)]).then(function(imgs) {
+        var base = imgs[0], mask = imgs[1];
+        var W = 640, H = Math.round(base.height * (W / base.width));
+        var mc = document.createElement('canvas'); mc.width = W; mc.height = H;
+        var mx = mc.getContext('2d');
+        mx.drawImage(mask, 0, 0, W, H);
+        mx.globalCompositeOperation = 'source-in';
+        if (c.stops) {
+          var gr = mx.createLinearGradient(0, g.logoY[0] * H, 0, g.logoY[1] * H);
+          gr.addColorStop(0, c.stops[0]); gr.addColorStop(0.5, c.stops[1]); gr.addColorStop(1, c.stops[2]);
+          mx.fillStyle = gr;
+        } else {
+          mx.fillStyle = c.hex;
+        }
+        mx.fillRect(0, 0, W, H);
+        var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        var cx = cv.getContext('2d');
+        cx.drawImage(base, 0, 0, W, H);
+        cx.drawImage(mc, 0, 0);
+        return cv.toDataURL('image/jpeg', 0.85).split(',')[1];
+      });
+    }
 
     // ── Form submission ──
     var form = document.getElementById('signupForm');
@@ -982,8 +1397,10 @@
       e.preventDefault();
       clearError();
 
+      var division = currentDivision();
+      var payment = (document.querySelector('input[name="payment"]:checked') || {}).value || '';
       var data = {
-        waitlist: true,
+        type: 'sim0913',
         firstName: document.getElementById('firstName').value.trim(),
         lastName: document.getElementById('lastName').value.trim(),
         email: document.getElementById('email').value.trim(),
@@ -991,84 +1408,127 @@
         weights: (document.querySelector('input[name="weights"]:checked') || {}).value || '',
         expectedTime: document.getElementById('expectedTime').value,
         homeGym: document.getElementById('homeGym').value.trim(),
+        payment: payment,
         comments: document.getElementById('comments').value.trim(),
-        partnerName: '',
-        teammates: ''
+        pricePerAthlete: PRICE
       };
 
       // Validate basics
       if (!data.firstName || !data.lastName) return showError('Please enter your first and last name.');
       if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return showError('Please enter a valid email address.');
       if (!data.division) return showError('Please choose a division.');
+
+      // Athletes + shirts
+      athletes[0].name = registrantName();
+      for (var i = 0; i < athletes.length; i++) {
+        var a = athletes[i];
+        if (!a.name) return showError('Please enter a name for Athlete ' + (i + 1) + '.');
+        if (!a.size) return showError('Please pick a shirt size for ' + (i === 0 ? 'yourself' : a.name) + '.');
+      }
+      data.athletes = athletes.map(function(a) {
+        return {
+          name: a.name,
+          garment: GARMENTS[a.garment].name,
+          garmentId: a.garment,
+          size: a.size,
+          color: colorById(a.colorId).name,
+          colorId: a.colorId
+        };
+      });
+      data.total = athletes.length * PRICE;
+
       if (!data.weights) return showError('Please choose a weight category.');
       if (!data.expectedTime) return showError('Please select an estimated finish time for heat placement.');
       if (!data.homeGym) return showError('Please tell us what gym you train at.');
-
-      // Conditional validation
-      if (data.division === 'Doubles') {
-        var p = document.getElementById('partnerName').value.trim();
-        if (!p) return showError("Please enter your partner's name.");
-        data.partnerName = p;
-      }
-      if (data.division === 'Team of 4 Relay') {
-        var t1 = document.getElementById('teammate1').value.trim();
-        var t2 = document.getElementById('teammate2').value.trim();
-        var t3 = document.getElementById('teammate3').value.trim();
-        if (!t1 || !t2 || !t3) return showError('Please enter all three teammates.');
-        data.teammates = [t1, t2, t3].join(', ');
-      }
+      if (!data.payment) return showError('Please choose how you\'ll pay.');
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'SUBMITTING...';
+      document.getElementById('loadingText').textContent = 'Rendering your shirts...';
       loadingOverlay.classList.add('active');
 
-      // Local preview mode (when backend not deployed yet)
-      if (SCRIPT_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL') {
-        console.log('Form data (preview mode):', JSON.stringify(data, null, 2));
-        setTimeout(function() {
-          loadingOverlay.classList.remove('active');
-          showSuccess(data);
-        }, 600);
-        return;
-      }
+      // Render shirt mockups for the confirmation email
+      Promise.all(athletes.map(renderMockJpeg)).then(function(jpegs) {
+        data.mockups = jpegs.map(function(b64, i) {
+          return { name: data.athletes[i].name, jpeg: b64 };
+        });
+      }).catch(function() {
+        data.mockups = []; // email just goes without images
+      }).then(function() {
+        document.getElementById('loadingText').textContent = 'Submitting...';
 
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(data)
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(resp) {
-        loadingOverlay.classList.remove('active');
-        if (resp.status === 'ok') {
-          showSuccess(data);
-        } else {
-          throw new Error(resp.error || 'Unknown error');
+        // Local preview mode (hash #test) — log instead of POST
+        if (location.hash.indexOf('test') !== -1) {
+          console.log('Form data (preview mode):', JSON.parse(JSON.stringify(data, function(k, v) { return k === 'jpeg' ? '[' + v.length + ' b64 chars]' : v; })));
+          setTimeout(function() {
+            loadingOverlay.classList.remove('active');
+            showSuccess(data);
+          }, 600);
+          return;
         }
-      })
-      .catch(function(err) {
-        loadingOverlay.classList.remove('active');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'ADD ME TO THE WAIT LIST';
-        showError('Something went wrong — please try again. (' + err.message + ')');
+
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(data)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+          loadingOverlay.classList.remove('active');
+          if (resp.status === 'ok') {
+            showSuccess(data);
+          } else {
+            throw new Error(resp.error || 'Unknown error');
+          }
+        })
+        .catch(function(err) {
+          loadingOverlay.classList.remove('active');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'SIGN ME UP';
+          showError('Something went wrong — please try again. (' + err.message + ')');
+        });
       });
     });
+
+    function payInstructionsHtml(data) {
+      var n = data.athletes.length;
+      var total = data.total;
+      var note = 'Hyrox Sim 9/13 — ' + data.firstName + ' ' + data.lastName;
+      var each = n > 1
+        ? '<p><strong>Each athlete pays their own $' + PRICE + '</strong> (total for your crew: $' + total + '). Share these instructions with your teammates.</p>'
+        : '';
+      if (data.payment === 'Venmo') {
+        var venmoUrl = 'https://venmo.com/?txn=pay&audience=public&recipients=' + VENMO_USERNAME + '&amount=' + PRICE + '&note=' + encodeURIComponent(note);
+        return '<h3>Pay with Venmo</h3>' + each +
+          '<p>Send <strong>$' + PRICE + '</strong> to <code>@' + VENMO_USERNAME + '</code> with the note <code>' + escapeHtml(note) + '</code>' + (n > 1 ? ' (teammates: use your own name in the note)' : '') + '.</p>' +
+          '<a class="pay-btn" href="' + venmoUrl + '" target="_blank" rel="noopener">Pay $' + PRICE + ' on Venmo →</a>';
+      }
+      if (data.payment === 'Zelle') {
+        return '<h3>Pay with Zelle</h3>' + each +
+          '<p>Send <strong>$' + PRICE + '</strong> via Zelle to <code>' + ZELLE_EMAIL + '</code>. Put <code>' + escapeHtml(note) + '</code> in the memo' + (n > 1 ? ' (teammates: use your own name)' : '') + '.</p>';
+      }
+      return '<h3>Pay by Credit Card</h3>' + each +
+        '<p>Complete a <strong>$' + PRICE + '</strong> checkout on our secure Zen Planner store' + (n > 1 ? ' — one checkout per athlete' : '') + '.</p>' +
+        '<a class="pay-btn" href="' + ZEN_PLANNER_CHECKOUT_URL + '" target="_blank" rel="noopener">Pay $' + PRICE + ' on Zen Planner →</a>';
+    }
 
     function showSuccess(data) {
       document.getElementById('signupForm').style.display = 'none';
       document.getElementById('infoCard').style.display = 'none';
+      document.getElementById('successPay').innerHTML = payInstructionsHtml(data);
       var details = document.getElementById('successDetails');
       var rows = [
-        ['Name', data.firstName + ' ' + data.lastName],
         ['Division', data.division],
-        ['Weights', data.weights]
+        ['Weights', data.weights],
+        ['Est. Time', data.expectedTime],
+        ['Home Gym', data.homeGym],
+        ['Payment', data.payment + ' — $' + data.total + (data.athletes.length > 1 ? ' ($' + PRICE + ' each)' : '')]
       ];
-      if (data.partnerName) rows.push(['Partner', data.partnerName]);
-      if (data.teammates) rows.push(['Teammates', data.teammates]);
-      if (data.expectedTime) rows.push(['Est. Time', data.expectedTime]);
-      if (data.homeGym) rows.push(['Home Gym', data.homeGym]);
+      data.athletes.forEach(function(a, i) {
+        rows.push(['Athlete ' + (i + 1), a.name + ' · ' + a.garment + ' · ' + a.size + ' · ' + a.color + ' logo']);
+      });
       details.innerHTML = rows.map(function(r) {
-        return '<div class="row"><span class="label-k">' + r[0] + '</span><span>' + escapeHtml(r[1]) + '</span></div>';
+        return '<div class="row"><span class="label-k">' + r[0] + '</span><span class="val">' + escapeHtml(r[1]) + '</span></div>';
       }).join('');
       document.getElementById('successMsg').classList.add('show');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1085,10 +1545,10 @@
       document.getElementById('signupForm').style.display = 'block';
       document.getElementById('infoCard').style.display = 'block';
       form.reset();
-      doublesFields.classList.remove('show');
-      teamFields.classList.remove('show');
+      athletes = [ newAthlete() ];
+      buildCards();
       submitBtn.disabled = false;
-      submitBtn.textContent = 'ADD ME TO THE WAIT LIST';
+      submitBtn.textContent = 'SIGN ME UP';
       clearError();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -1119,13 +1579,15 @@
 
     lightboxClose.addEventListener('click', closeLightbox);
     lightbox.addEventListener('click', function(e) {
-      // Close on backdrop click but not on image click
       if (e.target === lightbox) closeLightbox();
     });
 
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape' && lightbox.classList.contains('show')) closeLightbox();
     });
+
+    // ── Init ──
+    buildCards();
   </script>
 </body>
 </html>
