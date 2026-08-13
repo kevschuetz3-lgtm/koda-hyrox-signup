@@ -446,14 +446,17 @@ var SIM0913_VENMO = "kevin-schuetz-5";
 var SIM0913_ZELLE = "kodaironview@gmail.com";
 var SIM0913_ZP_URL = "https://kodaironview.sites.zenplanner.com/retail-product.cfm?ProductId=5F4A8380-AC28-409B-A664-E088BB910ED0";
 
-// Heats every 10 min, 9:00–11:50 AM. 8 spots (lanes) per slot — one spot
-// per racing unit (a single, a doubles pair, or a relay team of 4).
+// Heats every 10 min, 9:00–11:50 AM. 8 lanes per slot, TYPED by weight
+// setup — one lane/spot per racing unit (single, doubles pair, or relay
+// team). Per Kevin (8/12): 1 red lane (Men's Pro), 3 green lanes
+// (Men's Open / Women's Pro / Mixed / men's doubles+relay), 3 blue lanes
+// (Women's Open incl. doubles/relay), 1 yellow lane (Scaled).
 var SIM0913_SLOTS = [
   "9:00", "9:10", "9:20", "9:30", "9:40", "9:50",
   "10:00", "10:10", "10:20", "10:30", "10:40", "10:50",
   "11:00", "11:10", "11:20", "11:30", "11:40", "11:50"
 ];
-var SIM0913_SLOT_CAP = 8;
+var SIM0913_GROUP_CAPS = { "Red": 1, "Green": 3, "Blue": 3, "Scaled": 1 };
 
 var SIM0913_SIGNUP_HEADERS = [
   "Timestamp", "Registrant", "Email", "Division", "Sex", "Weights", "Weights Setup",
@@ -475,25 +478,26 @@ function sim0913WeightSetup(sex, weights) {
   return "Green — 335/227/53/44/14 · 10ft" + (sex === "Mixed" ? " (mixed*)" : "");
 }
 
-// Count non-test signups per heat slot (column "Heat" in Signups).
+// Count non-test signups per heat slot, split by lane type (weight group).
+// Group is the first word of the stored "Weights Setup" column.
 function sim0913SlotCounts() {
   var ss = getOrCreateSim0913Spreadsheet();
   var sheet = ss.getSheetByName("Signups");
   var rows = sheet.getDataRange().getValues().slice(1);
-  var counts = {}, groups = {};
-  SIM0913_SLOTS.forEach(function(s) { counts[s] = 0; groups[s] = []; });
+  var counts = {};
+  SIM0913_SLOTS.forEach(function(s) {
+    counts[s] = { "Red": 0, "Green": 0, "Blue": 0, "Scaled": 0 };
+  });
   rows.forEach(function(r) {
     var registrant = String(r[1] || "");
     var heat = String(r[8] || "").trim();
-    var setup = String(r[6] || "");
+    var g = String(r[6] || "").split(" ")[0]; // "Red"/"Green"/"Blue"/"Scaled"
     if (/test/i.test(registrant)) return;
-    if (counts.hasOwnProperty(heat)) {
-      counts[heat]++;
-      var g = setup.split(" ")[0]; // "Blue" / "Green" / "Red" / "Scaled"
-      if (g && groups[heat].indexOf(g) === -1) groups[heat].push(g);
+    if (counts.hasOwnProperty(heat) && counts[heat].hasOwnProperty(g)) {
+      counts[heat][g]++;
     }
   });
-  return { status: "ok", cap: SIM0913_SLOT_CAP, counts: counts, groups: groups };
+  return { status: "ok", caps: SIM0913_GROUP_CAPS, counts: counts };
 }
 
 function getOrCreateSim0913Spreadsheet() {
@@ -571,21 +575,28 @@ function handleSim0913(data) {
   }).join("\n");
   var setup = sim0913WeightSetup(data.sex || "", data.weights || "");
 
-  // Heat slot: validate + enforce the 8-spot cap under a lock so two
-  // simultaneous signups can't both grab the last lane.
+  // Heat slot: validate + enforce the per-lane-type cap under a lock so
+  // two simultaneous signups can't both grab the last lane of a type.
   var slot = String(data.heat || "").trim();
   if (SIM0913_SLOTS.indexOf(slot) === -1) {
     return ContentService
       .createTextOutput(JSON.stringify({ status: "error", error: "Invalid heat time." }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+  var group = setup.split(" ")[0]; // "Red"/"Green"/"Blue"/"Scaled"
+  var groupCap = SIM0913_GROUP_CAPS[group] || 0;
+  if (!groupCap) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "error", error: "Invalid category/weights combination." }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    var taken = sim0913SlotCounts().counts[slot] || 0;
-    if (taken >= SIM0913_SLOT_CAP) {
+    var taken = (sim0913SlotCounts().counts[slot] || {})[group] || 0;
+    if (taken >= groupCap) {
       return ContentService
-        .createTextOutput(JSON.stringify({ status: "slot_full", slot: slot }))
+        .createTextOutput(JSON.stringify({ status: "slot_full", slot: slot, group: group }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 

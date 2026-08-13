@@ -1040,7 +1040,7 @@
       </div>
 
       <div class="form-section-title">Pick Your Heat</div>
-      <p class="section-hint">Heats go off every 10 minutes. <strong style="color:var(--text)">8 spots per heat</strong> — your whole crew (single, pair, or relay team) takes one spot. Racing with friends in other crews? Pick the same heat time.</p>
+      <p class="section-hint">Heats go off every 10 minutes, and each heat has <strong style="color:var(--text)">8 lanes split by division</strong> — your whole crew (single, pair, or relay team) races in one lane. Availability below is for <em>your</em> division. Racing with friends in other crews? Pick the same heat time.</p>
       <div class="field">
         <div class="slot-grid" id="slotGrid" role="radiogroup" aria-label="Heat time"></div>
         <p class="slot-status" id="slotStatus">Checking heat availability…</p>
@@ -1131,9 +1131,25 @@
     var ZELLE_EMAIL = 'kodaironview@gmail.com';
     var ZEN_PLANNER_CHECKOUT_URL = 'https://kodaironview.sites.zenplanner.com/retail-product.cfm?ProductId=5F4A8380-AC28-409B-A664-E088BB910ED0';
 
-    // Heats every 10 min, 9:00–11:50 AM — 8 spots per heat, one spot per crew.
+    // Heats every 10 min, 9:00–11:50 AM. 8 lanes per heat, typed by weight
+    // setup: 1 Men's Pro lane, 3 lanes for Men's Open / Women's Pro / Mixed,
+    // 3 lanes for Women's Open, 1 Scaled lane. One lane per crew.
     var SLOTS = ['9:00','9:10','9:20','9:30','9:40','9:50','10:00','10:10','10:20','10:30','10:40','10:50','11:00','11:10','11:20','11:30','11:40','11:50'];
-    var SLOT_CAP = 8;
+    var GROUP_CAPS = { 'Red': 1, 'Green': 3, 'Blue': 3, 'Scaled': 1 };
+
+    // Which lane type a (category, weights) combo races in — mirrors the backend.
+    function weightGroup(sex, weights) {
+      if (!sex || !weights) return null;
+      if (weights === 'Scaled') return 'Scaled';
+      if (weights === 'Pro') return sex === "Men's" ? 'Red' : 'Green';
+      return sex === "Women's" ? 'Blue' : 'Green'; // Open
+    }
+
+    function currentGroup() {
+      var sex = (document.querySelector('input[name="sex"]:checked') || {}).value || '';
+      var weights = (document.querySelector('input[name="weights"]:checked') || {}).value || '';
+      return weightGroup(sex, weights);
+    }
 
     // Vinyl colors — sampled from the exact HTVRONT rolls being ordered.
     // Gold + Silver are chrome vinyls, rendered as vertical metallic gradients.
@@ -1407,23 +1423,43 @@
 
     // ── Heat slot picker ──
     var selectedSlot = '';
-    var slotCounts = null; // null = unknown (fail open; the backend enforces the cap)
+    var slotCounts = null;   // per-slot per-group counts; null = not loaded (fail open — the backend enforces caps)
+    var slotsLoaded = false;
+
+    function groupLeft(slot, group) {
+      if (!slotCounts || !group) return null; // unknown
+      var taken = (slotCounts[slot] || {})[group] || 0;
+      return Math.max(0, (GROUP_CAPS[group] || 0) - taken);
+    }
 
     function renderSlots() {
       var grid = document.getElementById('slotGrid');
+      var status = document.getElementById('slotStatus');
+      var group = currentGroup();
       grid.innerHTML = '';
+      if (selectedSlot && group && groupLeft(selectedSlot, group) === 0) selectedSlot = '';
       SLOTS.forEach(function(s) {
-        var taken = slotCounts ? (slotCounts[s] || 0) : null;
-        var isFull = taken !== null && taken >= SLOT_CAP;
+        var left = group ? groupLeft(s, group) : null; // null = unknown
+        var isFull = left === 0;
+        var pickable = !!group && !isFull;
         var el = document.createElement('div');
         el.className = 'slot' + (selectedSlot === s ? ' sel' : '') + (isFull ? ' full' : '');
         el.setAttribute('role', 'radio');
         el.setAttribute('aria-checked', selectedSlot === s ? 'true' : 'false');
-        el.tabIndex = isFull ? -1 : 0;
-        var leftTxt = isFull ? 'FULL' : (taken === null ? '8 spots' : (SLOT_CAP - taken) + ' left');
+        el.tabIndex = pickable ? 0 : -1;
+        var leftTxt;
+        if (!group) leftTxt = '&nbsp;';
+        else if (isFull) leftTxt = 'FULL';
+        else if (left === null) leftTxt = 'open';
+        else leftTxt = left + (left === 1 ? ' lane' : ' lanes') + ' left';
         el.innerHTML = '<span class="t">' + s + '</span><span class="left">' + leftTxt + '</span>';
         function pick() {
+          if (!group) {
+            showError('Pick your category and weight class first — lane availability depends on them.');
+            return;
+          }
           if (isFull) return;
+          clearError();
           selectedSlot = s;
           renderSlots();
         }
@@ -1431,24 +1467,26 @@
         el.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
         grid.appendChild(el);
       });
+      if (!group) {
+        status.textContent = 'Choose your category and weight class above to see lane availability for your division.';
+      } else {
+        var capTxt = { Red: "Men's Pro has 1 lane per heat", Green: 'your division shares 3 lanes per heat',
+                       Blue: 'your division shares 3 lanes per heat', Scaled: 'Scaled has 1 lane per heat' }[group];
+        status.textContent = 'All times are AM · ' + capTxt + (slotsLoaded ? ' · availability updates live' : '');
+      }
     }
 
     function fetchSlots() {
-      var status = document.getElementById('slotStatus');
-      status.textContent = 'Checking heat availability…';
       fetch(SCRIPT_URL + '?action=sim0913Slots')
         .then(function(r) { return r.json(); })
         .then(function(resp) {
           if (resp.status !== 'ok') throw new Error('bad response');
           slotCounts = resp.counts || {};
-          if (resp.cap) SLOT_CAP = resp.cap;
-          if (selectedSlot && (slotCounts[selectedSlot] || 0) >= SLOT_CAP) selectedSlot = '';
+          slotsLoaded = true;
           renderSlots();
-          status.textContent = 'All times are AM · availability updates live';
         })
         .catch(function() {
           renderSlots();
-          status.textContent = 'All times are AM';
         });
     }
 
@@ -1462,7 +1500,13 @@
 
     // ── Wiring ──
     document.querySelectorAll('input[name="division"]').forEach(function(r) {
-      r.addEventListener('change', function() { buildCards(); syncMixedCard(); });
+      r.addEventListener('change', function() { buildCards(); syncMixedCard(); renderSlots(); });
+    });
+    document.querySelectorAll('input[name="sex"]').forEach(function(r) {
+      r.addEventListener('change', renderSlots);
+    });
+    document.querySelectorAll('input[name="weights"]').forEach(function(r) {
+      r.addEventListener('change', renderSlots);
     });
     document.querySelectorAll('input[name="payment"]').forEach(function(r) {
       r.addEventListener('change', updatePayNote);
@@ -1573,8 +1617,8 @@
 
       if (!data.weights) return showError('Please choose a weight category.');
       if (!data.heat) return showError('Please pick your heat time.');
-      if (slotCounts && (slotCounts[data.heat] || 0) >= SLOT_CAP) {
-        return showError('That heat is full — please pick another time.');
+      if (groupLeft(data.heat, weightGroup(data.sex, data.weights)) === 0) {
+        return showError('That heat has no more lanes for your division — please pick another time.');
       }
       if (!data.homeGym) return showError('Please tell us what gym you train at.');
       if (!data.payment) return showError('Please choose how you\'ll pay.');
@@ -1619,7 +1663,7 @@
             submitBtn.textContent = 'SIGN ME UP';
             selectedSlot = '';
             fetchSlots();
-            showError('The ' + data.heat + ' AM heat just filled up — please pick another time.');
+            showError('The ' + data.heat + ' AM heat just ran out of lanes for your division — please pick another time.');
             document.getElementById('slotGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
           } else {
             throw new Error(resp.error || 'Unknown error');
