@@ -184,17 +184,102 @@
       padding: 28px 24px;
     }
 
-    .form-section-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.25rem;
-      letter-spacing: 0.1em;
-      color: var(--accent);
-      margin: 4px 0 16px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
+    /* ── Accordion sections ── */
+    .acc {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.015);
+      transition: border-color 0.15s ease;
     }
 
-    .form-section-title:not(:first-child) { margin-top: 28px; }
+    .acc.open { border-color: #3d3d3d; }
+
+    .acc-head {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px 18px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+    }
+
+    .acc-head:hover .acc-title { color: var(--accent); }
+
+    .acc-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      color: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .acc.done .acc-check {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+
+    .acc[data-sec="extra"] .acc-check { visibility: hidden; }
+
+    .acc-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 0.1em;
+      color: var(--text);
+      transition: color 0.15s ease;
+    }
+
+    .acc.open .acc-title { color: var(--accent); }
+
+    .acc-sum {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: right;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 48%;
+    }
+
+    .acc.done .acc-sum { color: var(--accent); }
+
+    .acc-chev {
+      color: var(--muted);
+      font-size: 0.8rem;
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .acc.open .acc-chev { transform: rotate(180deg); }
+
+    .acc-body {
+      display: none;
+      padding: 6px 18px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .acc.open .acc-body { display: block; }
+
+    @media (max-width: 480px) {
+      .acc-head { padding: 13px 14px; }
+      .acc-body { padding: 6px 14px 16px; }
+      .acc-sum { max-width: 40%; }
+    }
 
     .section-hint {
       font-size: 0.85rem;
@@ -398,6 +483,37 @@
       pointer-events: none;
     }
 
+    /* moving glint over metallic (chrome) logo colors — live preview only */
+    .mock .sheen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+      pointer-events: none;
+      background-image: linear-gradient(100deg,
+        rgba(255,255,255,0) 42%,
+        rgba(255,255,255,0.65) 50%,
+        rgba(255,255,255,0) 58%);
+      background-size: 240% 100%;
+      background-repeat: no-repeat;
+      animation: sheen-sweep 5.5s ease-in-out infinite;
+    }
+
+    .mock .sheen.on { display: block; }
+
+    @keyframes sheen-sweep {
+      0%   { background-position: 180% 0; }
+      45%  { background-position: -80% 0; }
+      100% { background-position: -80% 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .mock .sheen { animation: none; display: none !important; }
+    }
+
     .mock-caption {
       position: absolute;
       left: 8px;
@@ -512,6 +628,10 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
+
+    .slot .left.warn { color: #f3c34c; }
+
+    .slot.full .left { color: var(--error); }
 
     .slot-status {
       font-size: 0.8rem;
@@ -931,7 +1051,10 @@
     </div>
 
     <form id="signupForm" novalidate>
-      <div class="form-section-title">Athlete Info</div>
+
+      <div class="acc open" data-sec="info">
+      <button type="button" class="acc-head" data-sec="info"><span class="acc-check">✓</span><span class="acc-title">1) Athlete Info</span><span class="acc-sum" id="sum-info"></span><span class="acc-chev">▼</span></button>
+      <div class="acc-body">
 
       <div class="field-row">
         <div class="field">
@@ -949,7 +1072,11 @@
         <input type="email" id="email" name="email" required autocomplete="email">
       </div>
 
-      <div class="form-section-title">Division</div>
+      </div></div>
+
+      <div class="acc" data-sec="division">
+      <button type="button" class="acc-head" data-sec="division"><span class="acc-check">✓</span><span class="acc-title">2) Division &amp; Category</span><span class="acc-sum" id="sum-division"></span><span class="acc-chev">▼</span></button>
+      <div class="acc-body">
       <div class="field">
         <div class="radio-group" role="radiogroup" aria-label="Division">
           <label class="radio-card">
@@ -1000,11 +1127,19 @@
         </div>
       </div>
 
-      <div class="form-section-title">Your Shirts</div>
+      </div></div>
+
+      <div class="acc" data-sec="shirts">
+      <button type="button" class="acc-head" data-sec="shirts"><span class="acc-check">✓</span><span class="acc-title">3) Your Shirts</span><span class="acc-sum" id="sum-shirts"></span><span class="acc-chev">▼</span></button>
+      <div class="acc-body">
       <p class="section-hint" id="shirtHint">Every athlete gets the event shirt — black tee or black crop, your choice of logo color. The preview updates live.</p>
       <div id="athleteCards"><!-- built by JS --></div>
 
-      <div class="form-section-title">Weight Category</div>
+      </div></div>
+
+      <div class="acc" data-sec="weights">
+      <button type="button" class="acc-head" data-sec="weights"><span class="acc-check">✓</span><span class="acc-title">4) Weight Category</span><span class="acc-sum" id="sum-weights"></span><span class="acc-chev">▼</span></button>
+      <div class="acc-body">
       <div class="field">
         <div class="radio-group" role="radiogroup" aria-label="Weight Category">
           <label class="radio-card">
@@ -1039,20 +1174,31 @@
         <p class="weights-ref-caption">Reference: weights for each station by division</p>
       </div>
 
-      <div class="form-section-title">Pick Your Heat</div>
+      </div></div>
+
+      <div class="acc" data-sec="heat">
+      <button type="button" class="acc-head" data-sec="heat"><span class="acc-check">✓</span><span class="acc-title">5) Pick Your Heat</span><span class="acc-sum" id="sum-heat"></span><span class="acc-chev">▼</span></button>
+      <div class="acc-body">
       <p class="section-hint">Heats go off every 10 minutes, and each heat has <strong style="color:var(--text)">8 lanes split by division</strong> — your whole crew (single, pair, or relay team) races in one lane. Availability below is for <em>your</em> division. Racing with friends in other crews? Pick the same heat time.</p>
       <div class="field">
         <div class="slot-grid" id="slotGrid" role="radiogroup" aria-label="Heat time"></div>
         <p class="slot-status" id="slotStatus">Checking heat availability…</p>
       </div>
 
-      <div class="form-section-title">Home Gym</div>
+      </div></div>
+
+      <div class="acc" data-sec="gym">
+      <button type="button" class="acc-head" data-sec="gym"><span class="acc-check">✓</span><span class="acc-title">6) Home Gym</span><span class="acc-sum" id="sum-gym"></span><span class="acc-chev">▼</span></button>
+      <div class="acc-body">
       <div class="field">
         <label for="homeGym">What gym do you train at? <span class="req">*</span></label>
         <input type="text" id="homeGym" name="homeGym" required autocomplete="organization" placeholder="e.g. Koda CrossFit Iron View">
       </div>
+      </div></div>
 
-      <div class="form-section-title">Payment</div>
+      <div class="acc" data-sec="payment">
+      <button type="button" class="acc-head" data-sec="payment"><span class="acc-check">✓</span><span class="acc-title">7) Payment</span><span class="acc-sum" id="sum-payment"></span><span class="acc-chev">▼</span></button>
+      <div class="acc-body">
       <div class="bill-line">
         <span id="billText">1 athlete × $25</span>
         <span class="amt" id="billAmt">$25</span>
@@ -1084,11 +1230,16 @@
         <div class="pay-note" id="payNote"></div>
       </div>
 
-      <div class="form-section-title">Anything Else?</div>
+      </div></div>
+
+      <div class="acc" data-sec="extra">
+      <button type="button" class="acc-head" data-sec="extra"><span class="acc-check">✓</span><span class="acc-title">Anything Else?</span><span class="acc-sum" id="sum-extra">optional</span><span class="acc-chev">▼</span></button>
+      <div class="acc-body">
       <div class="field">
         <label for="comments">Comments or Questions</label>
         <textarea id="comments" name="comments" placeholder="Optional — let us know if you have any questions or special requests."></textarea>
       </div>
+      </div></div>
 
       <button type="submit" class="submit-btn" id="submitBtn">SIGN ME UP</button>
       <div class="form-error" id="formError"></div>
@@ -1152,16 +1303,20 @@
     }
 
     // Vinyl colors — sampled from the exact HTVRONT rolls being ordered.
-    // Gold + Silver are chrome vinyls, rendered as vertical metallic gradients.
+    // Gold + Silver are chrome vinyls, rendered as chrome-foil gradients:
+    // bright metal above a crisp dark "horizon" band, flash below.
+    // stops = [position 0..1 across the wordmark, color].
     var COLORS = [
-      { id: 'gold',     name: 'Gold',        stops: ['#FFE9A2', '#FED968', '#D9A62E'] },
+      { id: 'gold',     name: 'Gold',
+        stops: [[0, '#FFF9D8'], [0.30, '#FFE58A'], [0.47, '#E2A82F'], [0.53, '#8A5A0B'], [0.60, '#EFC14D'], [0.82, '#FFE9A0'], [1, '#C9942C']] },
       { id: 'pink',     name: 'Hot Pink',    hex: '#FA5C8F' },
       { id: 'lime',     name: 'Lime Green',  hex: '#5BF94C' },
       { id: 'blue',     name: 'Bright Blue', hex: '#3A9EF4' },
       { id: 'lavender', name: 'Lavender',    hex: '#E6D5FF' },
       { id: 'red',      name: 'Red',         hex: '#F3222B' },
       { id: 'orange',   name: 'Orange',      hex: '#FF7244' },
-      { id: 'silver',   name: 'Silver',      stops: ['#F6F6F5', '#DDDDDB', '#A9ABAE'] },
+      { id: 'silver',   name: 'Silver',
+        stops: [[0, '#FDFDFD'], [0.30, '#E9EBED'], [0.47, '#BAC0C6'], [0.53, '#6E747B'], [0.60, '#D6DADE'], [0.82, '#F4F5F6'], [1, '#A7ACB2']] },
       { id: 'white',    name: 'White',       hex: '#FFFFFF' }
     ];
 
@@ -1190,17 +1345,21 @@
     function cssFill(color, garment) {
       if (color.stops) {
         var y = GARMENTS[garment].logoY;
-        var mid = ((y[0] + y[1]) / 2 * 100).toFixed(1);
-        return 'linear-gradient(180deg, ' + color.stops[0] + ' ' + (y[0] * 100).toFixed(1) + '%, ' +
-               color.stops[1] + ' ' + mid + '%, ' + color.stops[2] + ' ' + (y[1] * 100).toFixed(1) + '%)';
+        var span = y[1] - y[0];
+        var parts = color.stops.map(function(s) {
+          return s[1] + ' ' + ((y[0] + s[0] * span) * 100).toFixed(2) + '%';
+        });
+        return 'linear-gradient(180deg, ' + parts.join(', ') + ')';
       }
       return color.hex;
     }
 
     function swatchFill(color) {
-      return color.stops
-        ? 'linear-gradient(135deg, ' + color.stops[0] + ', ' + color.stops[1] + ' 55%, ' + color.stops[2] + ')'
-        : color.hex;
+      if (!color.stops) return color.hex;
+      var parts = color.stops.map(function(s) {
+        return s[1] + ' ' + (s[0] * 100).toFixed(1) + '%';
+      });
+      return 'linear-gradient(135deg, ' + parts.join(', ') + ')';
     }
 
     // ── Athlete cards ──
@@ -1262,7 +1421,10 @@
           inp.addEventListener('input', function() {
             a.name = inp.value.trim();
             updateLabel(i);
+            accRender();
           });
+          inp.addEventListener('change', accPing);
+          inp.addEventListener('blur', accPing);
           nf.appendChild(inp);
           card.appendChild(nf);
         }
@@ -1277,6 +1439,7 @@
           '<div class="mock" id="mock' + i + '">' +
             '<img class="base" id="mockBase' + i + '" alt="Shirt mockup">' +
             '<div class="ink" id="mockInk' + i + '"></div>' +
+            '<div class="sheen" id="mockSheen' + i + '"></div>' +
           '</div>' +
           '<span class="mock-caption" id="mockCap' + i + '"></span>';
         grid.appendChild(mockWrap);
@@ -1316,7 +1479,7 @@
         sf.innerHTML = '<label for="size' + i + '">Size <span class="req">*</span></label>';
         var sel = document.createElement('select');
         sel.id = 'size' + i;
-        sel.addEventListener('change', function() { a.size = sel.value; });
+        sel.addEventListener('change', function() { a.size = sel.value; accPing(); });
         sf.appendChild(sel);
         controls.appendChild(sf);
 
@@ -1391,7 +1554,12 @@
       ink.style.webkitMaskImage = 'url(' + g.mask + ')';
       ink.style.maskImage = 'url(' + g.mask + ')';
       ink.style.background = cssFill(c, a.garment);
+      var sheen = document.getElementById('mockSheen' + i);
+      sheen.style.webkitMaskImage = 'url(' + g.mask + ')';
+      sheen.style.maskImage = 'url(' + g.mask + ')';
+      sheen.classList.toggle('on', !!c.stops);
       document.getElementById('mockCap' + i).textContent = g.name + ' · ' + c.name;
+      if (typeof accPing === 'function') accPing();
     }
 
     // ── Bill + payment note ──
@@ -1447,32 +1615,36 @@
         el.setAttribute('role', 'radio');
         el.setAttribute('aria-checked', selectedSlot === s ? 'true' : 'false');
         el.tabIndex = pickable ? 0 : -1;
-        var leftTxt;
+        var leftTxt, warn = '';
         if (!group) leftTxt = '&nbsp;';
         else if (isFull) leftTxt = 'FULL';
         else if (left === null) leftTxt = 'open';
-        else leftTxt = left + (left === 1 ? ' lane' : ' lanes') + ' left';
-        el.innerHTML = '<span class="t">' + s + '</span><span class="left">' + leftTxt + '</span>';
+        else { leftTxt = left + (left === 1 ? ' lane' : ' lanes') + ' left'; if (left === 1) warn = ' warn'; }
+        el.innerHTML = '<span class="t">' + s + '</span><span class="left' + warn + '">' + leftTxt + '</span>';
         function pick() {
           if (!group) {
-            showError('Pick your category and weight class first — lane availability depends on them.');
+            showError('Pick your category and weight class first — lane availability depends on them.', 'division');
             return;
           }
           if (isFull) return;
           clearError();
           selectedSlot = s;
           renderSlots();
+          accPing();
         }
         el.addEventListener('click', pick);
         el.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
         grid.appendChild(el);
       });
       if (!group) {
-        status.textContent = 'Choose your category and weight class above to see lane availability for your division.';
+        status.textContent = 'Choose your division, category, and weight class first to see lane availability.';
       } else {
         var capTxt = { Red: "Men's Pro has 1 lane per heat", Green: 'your division shares 3 lanes per heat',
                        Blue: 'your division shares 3 lanes per heat', Scaled: 'Scaled has 1 lane per heat' }[group];
-        status.textContent = 'All times are AM · ' + capTxt + (slotsLoaded ? ' · availability updates live' : '');
+        var openCount = 0;
+        SLOTS.forEach(function(s) { if (groupLeft(s, group) !== 0) openCount++; });
+        status.textContent = 'All times are AM · ' + capTxt +
+          (slotsLoaded ? ' · ' + openCount + ' of ' + SLOTS.length + ' heats open for your division' : '');
       }
     }
 
@@ -1490,6 +1662,103 @@
         });
     }
 
+    // ── Accordion sections (kit-builder style) ──
+    var SECTIONS = ['info', 'division', 'shirts', 'weights', 'heat', 'gym', 'payment', 'extra'];
+    var accOpen = 'info';
+    var accLastDone = {};
+
+    function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+    function secDone(key) {
+      switch (key) {
+        case 'info': return !!(document.getElementById('firstName').value.trim() &&
+                               document.getElementById('lastName').value.trim() &&
+                               validEmail(document.getElementById('email').value.trim()));
+        case 'division': return !!(document.querySelector('input[name="division"]:checked') &&
+                                   document.querySelector('input[name="sex"]:checked'));
+        case 'shirts': return athletes.every(function(a, i) {
+                         var nm = i === 0 ? registrantName() : a.name;
+                         return nm && a.size;
+                       });
+        case 'weights': return !!document.querySelector('input[name="weights"]:checked');
+        case 'heat': return !!selectedSlot;
+        case 'gym': return !!document.getElementById('homeGym').value.trim();
+        case 'payment': return !!document.querySelector('input[name="payment"]:checked');
+        default: return false; // extra is optional, never "done"
+      }
+    }
+
+    function secSummary(key) {
+      switch (key) {
+        case 'info': return registrantName();
+        case 'division': {
+          var d = (document.querySelector('input[name="division"]:checked') || {}).value;
+          var s = (document.querySelector('input[name="sex"]:checked') || {}).value;
+          return d ? ((s ? s + ' ' : '') + d) : '';
+        }
+        case 'shirts': {
+          if (!secDone('shirts')) return '';
+          if (athletes.length === 1) {
+            var a = athletes[0];
+            return GARMENTS[a.garment].name + ' · ' + a.size + ' · ' + colorById(a.colorId).name;
+          }
+          return athletes.length + ' shirts picked';
+        }
+        case 'weights': return (document.querySelector('input[name="weights"]:checked') || {}).value || '';
+        case 'heat': return selectedSlot ? selectedSlot + ' AM' : '';
+        case 'gym': return document.getElementById('homeGym').value.trim();
+        case 'payment': {
+          var p = (document.querySelector('input[name="payment"]:checked') || {}).value;
+          return p ? p + ' — $' + (athleteCount() * PRICE) : '';
+        }
+        default: return 'optional';
+      }
+    }
+
+    function accRender() {
+      SECTIONS.forEach(function(k) {
+        var card = document.querySelector('.acc[data-sec="' + k + '"]');
+        if (!card) return;
+        card.classList.toggle('done', secDone(k));
+        card.classList.toggle('open', accOpen === k);
+        var sum = document.getElementById('sum-' + k);
+        if (sum) sum.textContent = secSummary(k);
+      });
+    }
+
+    function openSec(key) {
+      accOpen = key;
+      accRender();
+      if (key) {
+        var card = document.querySelector('.acc[data-sec="' + key + '"]');
+        if (card) setTimeout(function() { card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 60);
+      }
+    }
+
+    // Recompute done-flags; when the open section just completed, advance
+    // to the first incomplete one (the kit-builder flow).
+    function accPing() {
+      var openWasDone = accLastDone[accOpen];
+      var flags = {};
+      SECTIONS.forEach(function(k) { flags[k] = secDone(k); });
+      var justFinished = accOpen && !openWasDone && flags[accOpen];
+      accLastDone = flags;
+      if (justFinished) {
+        var next = null;
+        for (var i = 0; i < SECTIONS.length; i++) if (!flags[SECTIONS[i]]) { next = SECTIONS[i]; break; }
+        openSec(next || '');
+        return;
+      }
+      accRender();
+    }
+
+    document.querySelectorAll('.acc-head').forEach(function(h) {
+      h.addEventListener('click', function() {
+        var k = h.getAttribute('data-sec');
+        openSec(accOpen === k ? '' : k);
+      });
+    });
+
     // ── Category (Mixed is doubles/relay only) ──
     function syncMixedCard() {
       var mixedInput = document.querySelector('#mixedCard input');
@@ -1500,19 +1769,26 @@
 
     // ── Wiring ──
     document.querySelectorAll('input[name="division"]').forEach(function(r) {
-      r.addEventListener('change', function() { buildCards(); syncMixedCard(); renderSlots(); });
+      r.addEventListener('change', function() { buildCards(); syncMixedCard(); renderSlots(); accPing(); });
     });
     document.querySelectorAll('input[name="sex"]').forEach(function(r) {
-      r.addEventListener('change', renderSlots);
+      r.addEventListener('change', function() { renderSlots(); accPing(); });
     });
     document.querySelectorAll('input[name="weights"]').forEach(function(r) {
-      r.addEventListener('change', renderSlots);
+      r.addEventListener('change', function() { renderSlots(); accPing(); });
     });
     document.querySelectorAll('input[name="payment"]').forEach(function(r) {
-      r.addEventListener('change', updatePayNote);
+      r.addEventListener('change', function() { updatePayNote(); accPing(); });
     });
-    document.getElementById('firstName').addEventListener('input', function() { updateLabel(0); });
-    document.getElementById('lastName').addEventListener('input', function() { updateLabel(0); });
+    // Text fields: live re-render on keystrokes, but only auto-advance on
+    // blur/change — advancing mid-typing would collapse the field under
+    // the user's cursor and truncate what they typed.
+    ['firstName', 'lastName', 'email', 'homeGym'].forEach(function(id) {
+      var el = document.getElementById(id);
+      el.addEventListener('input', function() { if (id !== 'email' && id !== 'homeGym') updateLabel(0); accRender(); });
+      el.addEventListener('change', accPing);
+      el.addEventListener('blur', accPing);
+    });
 
     // ── Canvas mockup render (for confirmation email) ──
     var imgCache = {};
@@ -1538,7 +1814,7 @@
         mx.globalCompositeOperation = 'source-in';
         if (c.stops) {
           var gr = mx.createLinearGradient(0, g.logoY[0] * H, 0, g.logoY[1] * H);
-          gr.addColorStop(0, c.stops[0]); gr.addColorStop(0.5, c.stops[1]); gr.addColorStop(1, c.stops[2]);
+          c.stops.forEach(function(s) { gr.addColorStop(s[0], s[1]); });
           mx.fillStyle = gr;
         } else {
           mx.fillStyle = c.hex;
@@ -1558,7 +1834,8 @@
     var formError = document.getElementById('formError');
     var loadingOverlay = document.getElementById('loadingOverlay');
 
-    function showError(msg) {
+    function showError(msg, sec) {
+      if (sec) { accOpen = sec; accRender(); }
       formError.textContent = msg;
       formError.classList.add('show');
       formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1591,17 +1868,17 @@
       };
 
       // Validate basics
-      if (!data.firstName || !data.lastName) return showError('Please enter your first and last name.');
-      if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return showError('Please enter a valid email address.');
-      if (!data.division) return showError('Please choose a division.');
-      if (!data.sex) return showError("Please choose a category (Men's, Women's" + (division === 'Singles' ? ')' : ', or Mixed)') + '.');
+      if (!data.firstName || !data.lastName) return showError('Please enter your first and last name.', 'info');
+      if (!data.email || !validEmail(data.email)) return showError('Please enter a valid email address.', 'info');
+      if (!data.division) return showError('Please choose a division.', 'division');
+      if (!data.sex) return showError("Please choose a category (Men's, Women's" + (division === 'Singles' ? ')' : ', or Mixed)') + '.', 'division');
 
       // Athletes + shirts
       athletes[0].name = registrantName();
       for (var i = 0; i < athletes.length; i++) {
         var a = athletes[i];
-        if (!a.name) return showError('Please enter a name for Athlete ' + (i + 1) + '.');
-        if (!a.size) return showError('Please pick a shirt size for ' + (i === 0 ? 'yourself' : a.name) + '.');
+        if (!a.name) return showError('Please enter a name for Athlete ' + (i + 1) + '.', 'shirts');
+        if (!a.size) return showError('Please pick a shirt size for ' + (i === 0 ? 'yourself' : a.name) + '.', 'shirts');
       }
       data.athletes = athletes.map(function(a) {
         return {
@@ -1615,13 +1892,13 @@
       });
       data.total = athletes.length * PRICE;
 
-      if (!data.weights) return showError('Please choose a weight category.');
-      if (!data.heat) return showError('Please pick your heat time.');
+      if (!data.weights) return showError('Please choose a weight category.', 'weights');
+      if (!data.heat) return showError('Please pick your heat time.', 'heat');
       if (groupLeft(data.heat, weightGroup(data.sex, data.weights)) === 0) {
-        return showError('That heat has no more lanes for your division — please pick another time.');
+        return showError('That heat has no more lanes for your division — please pick another time.', 'heat');
       }
-      if (!data.homeGym) return showError('Please tell us what gym you train at.');
-      if (!data.payment) return showError('Please choose how you\'ll pay.');
+      if (!data.homeGym) return showError('Please tell us what gym you train at.', 'gym');
+      if (!data.payment) return showError('Please choose how you\'ll pay.', 'payment');
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'SUBMITTING...';
@@ -1663,7 +1940,7 @@
             submitBtn.textContent = 'SIGN ME UP';
             selectedSlot = '';
             fetchSlots();
-            showError('The ' + data.heat + ' AM heat just ran out of lanes for your division — please pick another time.');
+            showError('The ' + data.heat + ' AM heat just ran out of lanes for your division — please pick another time.', 'heat');
             document.getElementById('slotGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
           } else {
             throw new Error(resp.error || 'Unknown error');
@@ -1738,6 +2015,9 @@
       syncMixedCard();
       selectedSlot = '';
       fetchSlots();
+      accOpen = 'info';
+      accLastDone = {};
+      accRender();
       submitBtn.disabled = false;
       submitBtn.textContent = 'SIGN ME UP';
       clearError();
@@ -1782,6 +2062,7 @@
     syncMixedCard();
     renderSlots();
     fetchSlots();
+    accRender();
   </script>
 </body>
 </html>
