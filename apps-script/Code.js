@@ -444,15 +444,57 @@ var SIM0913_EVENT = "Hyrox Simulation — September 13, 2026";
 var SIM0913_PRICE = 25;
 var SIM0913_VENMO = "kevin-schuetz-5";
 var SIM0913_ZELLE = "kodaironview@gmail.com";
-var SIM0913_ZP_URL = "https://kodaironview.sites.zenplanner.com/retail-product.cfm?ProductId=90E6E4E0-E70A-4AE4-8CA3-540E26683913";
+var SIM0913_ZP_URL = "https://kodaironview.sites.zenplanner.com/retail-product.cfm?ProductId=5F4A8380-AC28-409B-A664-E088BB910ED0";
+
+// Heats every 10 min, 9:00–11:50 AM. 8 spots (lanes) per slot — one spot
+// per racing unit (a single, a doubles pair, or a relay team of 4).
+var SIM0913_SLOTS = [
+  "9:00", "9:10", "9:20", "9:30", "9:40", "9:50",
+  "10:00", "10:10", "10:20", "10:30", "10:40", "10:50",
+  "11:00", "11:10", "11:20", "11:30", "11:40", "11:50"
+];
+var SIM0913_SLOT_CAP = 8;
 
 var SIM0913_SIGNUP_HEADERS = [
-  "Timestamp", "Registrant", "Email", "Division", "Weights", "Expected Time",
-  "Home Gym", "Athletes", "Shirts", "Payment Method", "Total Due", "Paid?", "Heat", "Comments"
+  "Timestamp", "Registrant", "Email", "Division", "Sex", "Weights", "Weights Setup",
+  "Home Gym", "Heat", "Athletes", "Shirts", "Payment Method", "Total Due", "Paid?", "Comments"
 ];
 var SIM0913_SHIRT_HEADERS = [
   "Timestamp", "Athlete", "Garment", "Size", "Logo Color", "Registrant", "Division", "Payment Method"
 ];
+
+// Which weight setup a category uses (per the "Heat Times" tab legend):
+// Blue 225/172/35/22/9·9ft, Green 335/227/53/44/14·10ft, Red 445/337/70/66/20·10ft.
+function sim0913WeightSetup(sex, weights) {
+  if (weights === "Scaled") return "Scaled — custom loads";
+  if (weights === "Pro") {
+    return sex === "Men's" ? "Red — 445/337/70/66/20 · 10ft" : "Green — 335/227/53/44/14 · 10ft";
+  }
+  // Open
+  if (sex === "Women's") return "Blue — 225/172/35/22/9 · 9ft";
+  return "Green — 335/227/53/44/14 · 10ft" + (sex === "Mixed" ? " (mixed*)" : "");
+}
+
+// Count non-test signups per heat slot (column "Heat" in Signups).
+function sim0913SlotCounts() {
+  var ss = getOrCreateSim0913Spreadsheet();
+  var sheet = ss.getSheetByName("Signups");
+  var rows = sheet.getDataRange().getValues().slice(1);
+  var counts = {}, groups = {};
+  SIM0913_SLOTS.forEach(function(s) { counts[s] = 0; groups[s] = []; });
+  rows.forEach(function(r) {
+    var registrant = String(r[1] || "");
+    var heat = String(r[8] || "").trim();
+    var setup = String(r[6] || "");
+    if (/test/i.test(registrant)) return;
+    if (counts.hasOwnProperty(heat)) {
+      counts[heat]++;
+      var g = setup.split(" ")[0]; // "Blue" / "Green" / "Red" / "Scaled"
+      if (g && groups[heat].indexOf(g) === -1) groups[heat].push(g);
+    }
+  });
+  return { status: "ok", cap: SIM0913_SLOT_CAP, counts: counts, groups: groups };
+}
 
 function getOrCreateSim0913Spreadsheet() {
   var props = PropertiesService.getScriptProperties();
@@ -475,7 +517,7 @@ function getOrCreateSim0913Spreadsheet() {
   var signups = ss.getActiveSheet();
   signups.setName("Signups");
   styleHeader(signups, SIM0913_SIGNUP_HEADERS,
-    [170, 170, 220, 130, 90, 140, 180, 80, 340, 130, 90, 70, 90, 300]);
+    [170, 170, 220, 130, 90, 90, 220, 180, 70, 80, 340, 130, 90, 70, 300]);
 
   var shirts = ss.insertSheet("Shirts");
   styleHeader(shirts, SIM0913_SHIRT_HEADERS,
@@ -527,12 +569,34 @@ function handleSim0913(data) {
   var shirtLines = athletes.map(function(a) {
     return a.name + " — " + a.garment + " / " + a.size + " / " + a.color;
   }).join("\n");
+  var setup = sim0913WeightSetup(data.sex || "", data.weights || "");
 
-  signups.appendRow([
-    now, registrant, data.email || "", data.division || "", data.weights || "",
-    data.expectedTime || "", data.homeGym || "", athletes.length, shirtLines,
-    data.payment || "", "$" + total, "", "", data.comments || ""
-  ]);
+  // Heat slot: validate + enforce the 8-spot cap under a lock so two
+  // simultaneous signups can't both grab the last lane.
+  var slot = String(data.heat || "").trim();
+  if (SIM0913_SLOTS.indexOf(slot) === -1) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "error", error: "Invalid heat time." }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var taken = sim0913SlotCounts().counts[slot] || 0;
+    if (taken >= SIM0913_SLOT_CAP) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: "slot_full", slot: slot }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    signups.appendRow([
+      now, registrant, data.email || "", data.division || "", data.sex || "",
+      data.weights || "", setup, data.homeGym || "", slot, athletes.length,
+      shirtLines, data.payment || "", "$" + total, "", data.comments || ""
+    ]);
+  } finally {
+    lock.releaseLock();
+  }
 
   athletes.forEach(function(a) {
     shirts.appendRow([
@@ -557,9 +621,9 @@ function handleSim0913(data) {
   var detailsTable =
     "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
     row("Event", SIM0913_EVENT) +
-    row("Division", data.division || "") +
-    row("Weights", data.weights || "") +
-    row("Expected Time", data.expectedTime || "") +
+    row("Heat Time", slot + " AM") +
+    row("Division", (data.sex ? data.sex + " " : "") + (data.division || "")) +
+    row("Weights", (data.weights || "") + " (" + setup + ")") +
     row("Home Gym", data.homeGym || "") +
     row("Payment", (data.payment || "") + " — $" + total + (athletes.length > 1 ? " ($" + SIM0913_PRICE + " each)" : "")) +
     athletes.map(function(a, i) {
@@ -579,8 +643,8 @@ function handleSim0913(data) {
           "<div style='font-family:Arial,sans-serif;max-width:600px'>" +
           "<h2 style='margin-bottom:4px'>You're in, " + escapeHtml(data.firstName || "") + "!</h2>" +
           "<p>You're signed up for the <strong>" + SIM0913_EVENT + "</strong> at Koda CrossFit Iron View, " +
-          "740 S Pierce Ave, Louisville, CO. Heats go off every 10 minutes from 9:00 to 11:50 AM — " +
-          "we'll email your heat time before race day.</p>" +
+          "740 S Pierce Ave, Louisville, CO. <strong>Your heat goes off at " + slot + " AM</strong> — " +
+          "plan to arrive early to check in and warm up.</p>" +
           "<div style='background:#f6f6f6;border-radius:10px;padding:14px 16px;margin:14px 0'>" + sim0913PayHtml(data) + "</div>" +
           detailsTable +
           (mockupHtml ? "<h3 style='margin-top:18px'>Your shirts</h3>" + mockupHtml : "") +
@@ -598,7 +662,8 @@ function handleSim0913(data) {
     try {
       MailApp.sendEmail({
         to: NOTIFY_EMAIL,
-        subject: "New Hyrox Sim 9/13 signup — " + registrant + " (" + (data.division || "") + ", " +
+        subject: "New Hyrox Sim 9/13 signup — " + registrant + " (" + slot + " AM, " +
+                 (data.sex ? data.sex + " " : "") + (data.division || "") + ", " +
                  athletes.length + (athletes.length === 1 ? " shirt" : " shirts") + ", " + (data.payment || "") + ")",
         htmlBody:
           "<h3>New signup for " + SIM0913_EVENT + "</h3>" +
@@ -674,12 +739,43 @@ function sim0913ShirtTally() {
   return { status: "ok", shirts: totalShirts, rows: rowsOut.length - 3 };
 }
 
+// One-time header migration (safe to re-run): rewrites row 1 of both tabs
+// to the current header lists. Data rows are untouched.
+//   GET  <exec-url>?action=sim0913FixHeaders
+function sim0913FixHeaders() {
+  var ss = getOrCreateSim0913Spreadsheet();
+  var fix = function(sheetName, headers) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return;
+    var lastCol = Math.max(sheet.getLastColumn(), headers.length);
+    sheet.getRange(1, 1, 1, lastCol).clearContent();
+    sheet.getRange(1, 1, 1, headers.length)
+      .setValues([headers])
+      .setFontWeight("bold")
+      .setBackground("#0a0a0a")
+      .setFontColor("#d6ff3f");
+  };
+  fix("Signups", SIM0913_SIGNUP_HEADERS);
+  fix("Shirts", SIM0913_SHIRT_HEADERS);
+  return { status: "ok", signupHeaders: SIM0913_SIGNUP_HEADERS.length, shirtHeaders: SIM0913_SHIRT_HEADERS.length };
+}
+
 // ── GET: Health check + on-demand actions ──
 function doGet(e) {
   var action = e && e.parameter ? e.parameter.action : "";
   if (action === "shirtTally0913") {
     return ContentService
       .createTextOutput(JSON.stringify(sim0913ShirtTally()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913Slots") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913SlotCounts()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913FixHeaders") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913FixHeaders()))
       .setMimeType(ContentService.MimeType.JSON);
   }
   return ContentService

@@ -464,6 +464,62 @@
 
     .swatch-name strong { color: var(--text); font-weight: 600; }
 
+    /* ── Heat slot picker ── */
+    .slot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 9px;
+    }
+
+    .slot {
+      padding: 10px 6px 8px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .slot:hover:not(.full) { border-color: #555; }
+
+    .slot.sel {
+      border-color: var(--accent);
+      background: rgba(214,255,63,0.08);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+
+    .slot.full {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: grayscale(1);
+    }
+
+    .slot .t {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.15rem;
+      letter-spacing: 0.06em;
+      color: var(--text);
+    }
+
+    .slot.sel .t { color: var(--accent); }
+
+    .slot .left {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .slot-status {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 10px;
+      text-align: center;
+    }
+
     /* ── Payment cards ── */
     .pay-note {
       margin-top: 12px;
@@ -871,7 +927,7 @@
   <!-- ═══ FORM ═══ -->
   <main class="container">
     <div class="info-card" id="infoCard">
-      <strong>$25 per athlete &middot; event shirt included.</strong> Choose Singles, Doubles, or a 4-person Relay — on a team, <strong>every athlete pays $25 and every athlete gets a shirt</strong>. Heats go off every 10 minutes from 9:00 to 11:50 AM; we'll assign your heat from your expected finish time and email it before race day.
+      <strong>$25 per athlete &middot; event shirt included.</strong> Choose Singles, Doubles, or a 4-person Relay — on a team, <strong>every athlete pays $25 and every athlete gets a shirt</strong>. Then <strong>pick your heat time</strong>: heats go off every 10 minutes from 9:00 to 11:50 AM, with 8 spots per heat.
     </div>
 
     <form id="signupForm" novalidate>
@@ -919,6 +975,30 @@
           </label>
         </div>
       </div>
+      <div class="field">
+        <label>Category <span class="req">*</span></label>
+        <div class="radio-group" role="radiogroup" aria-label="Category" id="sexGroup">
+          <label class="radio-card">
+            <input type="radio" name="sex" value="Men's" required>
+            <div class="card-inner">
+              <span class="card-title">MEN'S</span>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="sex" value="Women's" required>
+            <div class="card-inner">
+              <span class="card-title">WOMEN'S</span>
+            </div>
+          </label>
+          <label class="radio-card" id="mixedCard">
+            <input type="radio" name="sex" value="Mixed" required>
+            <div class="card-inner">
+              <span class="card-title">MIXED</span>
+              <span class="card-sub">Doubles &amp; relay only</span>
+            </div>
+          </label>
+        </div>
+      </div>
 
       <div class="form-section-title">Your Shirts</div>
       <p class="section-hint" id="shirtHint">Every athlete gets the event shirt — black tee or black crop, your choice of logo color. The preview updates live.</p>
@@ -959,18 +1039,11 @@
         <p class="weights-ref-caption">Reference: weights for each station by division</p>
       </div>
 
-      <div class="form-section-title">Expected Completion Time</div>
+      <div class="form-section-title">Pick Your Heat</div>
+      <p class="section-hint">Heats go off every 10 minutes. <strong style="color:var(--text)">8 spots per heat</strong> — your whole crew (single, pair, or relay team) takes one spot. Racing with friends in other crews? Pick the same heat time.</p>
       <div class="field">
-        <label for="expectedTime">Estimated finish time <span class="req">*</span> <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:0.8rem;">(used for heat placement)</span></label>
-        <select id="expectedTime" name="expectedTime" required>
-          <option value="">— Select an estimated time —</option>
-          <option value="Under 1:00">Under 1:00</option>
-          <option value="1:00 – 1:20">1:00 – 1:20</option>
-          <option value="1:20 – 1:40">1:20 – 1:40</option>
-          <option value="1:40 – 2:00">1:40 – 2:00</option>
-          <option value="2:00+">2:00+</option>
-          <option value="Not sure / first Hyrox">Not sure / first Hyrox</option>
-        </select>
+        <div class="slot-grid" id="slotGrid" role="radiogroup" aria-label="Heat time"></div>
+        <p class="slot-status" id="slotStatus">Checking heat availability…</p>
       </div>
 
       <div class="form-section-title">Home Gym</div>
@@ -1027,7 +1100,7 @@
       <p id="successLead">Your signup is locked in. One last step — payment.</p>
       <div class="success-pay" id="successPay"></div>
       <div class="success-details" id="successDetails"></div>
-      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:24px;">We'll email your heat time before race day. A confirmation with your shirt order is on its way to your inbox.</p>
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:24px;" id="successFoot">A confirmation with your heat time and shirt order is on its way to your inbox.</p>
       <button class="submit-another-btn" onclick="resetForm()">Submit another signup</button>
     </div>
   </main>
@@ -1056,7 +1129,11 @@
     var PRICE = 25;
     var VENMO_USERNAME = 'kevin-schuetz-5';
     var ZELLE_EMAIL = 'kodaironview@gmail.com';
-    var ZEN_PLANNER_CHECKOUT_URL = 'https://kodaironview.sites.zenplanner.com/retail-product.cfm?ProductId=90E6E4E0-E70A-4AE4-8CA3-540E26683913';
+    var ZEN_PLANNER_CHECKOUT_URL = 'https://kodaironview.sites.zenplanner.com/retail-product.cfm?ProductId=5F4A8380-AC28-409B-A664-E088BB910ED0';
+
+    // Heats every 10 min, 9:00–11:50 AM — 8 spots per heat, one spot per crew.
+    var SLOTS = ['9:00','9:10','9:20','9:30','9:40','9:50','10:00','10:10','10:20','10:30','10:40','10:50','11:00','11:10','11:20','11:30','11:40','11:50'];
+    var SLOT_CAP = 8;
 
     // Vinyl colors — sampled from the exact HTVRONT rolls being ordered.
     // Gold + Silver are chrome vinyls, rendered as vertical metallic gradients.
@@ -1328,9 +1405,64 @@
       note.classList.add('show');
     }
 
+    // ── Heat slot picker ──
+    var selectedSlot = '';
+    var slotCounts = null; // null = unknown (fail open; the backend enforces the cap)
+
+    function renderSlots() {
+      var grid = document.getElementById('slotGrid');
+      grid.innerHTML = '';
+      SLOTS.forEach(function(s) {
+        var taken = slotCounts ? (slotCounts[s] || 0) : null;
+        var isFull = taken !== null && taken >= SLOT_CAP;
+        var el = document.createElement('div');
+        el.className = 'slot' + (selectedSlot === s ? ' sel' : '') + (isFull ? ' full' : '');
+        el.setAttribute('role', 'radio');
+        el.setAttribute('aria-checked', selectedSlot === s ? 'true' : 'false');
+        el.tabIndex = isFull ? -1 : 0;
+        var leftTxt = isFull ? 'FULL' : (taken === null ? '8 spots' : (SLOT_CAP - taken) + ' left');
+        el.innerHTML = '<span class="t">' + s + '</span><span class="left">' + leftTxt + '</span>';
+        function pick() {
+          if (isFull) return;
+          selectedSlot = s;
+          renderSlots();
+        }
+        el.addEventListener('click', pick);
+        el.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+        grid.appendChild(el);
+      });
+    }
+
+    function fetchSlots() {
+      var status = document.getElementById('slotStatus');
+      status.textContent = 'Checking heat availability…';
+      fetch(SCRIPT_URL + '?action=sim0913Slots')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+          if (resp.status !== 'ok') throw new Error('bad response');
+          slotCounts = resp.counts || {};
+          if (resp.cap) SLOT_CAP = resp.cap;
+          if (selectedSlot && (slotCounts[selectedSlot] || 0) >= SLOT_CAP) selectedSlot = '';
+          renderSlots();
+          status.textContent = 'All times are AM · availability updates live';
+        })
+        .catch(function() {
+          renderSlots();
+          status.textContent = 'All times are AM';
+        });
+    }
+
+    // ── Category (Mixed is doubles/relay only) ──
+    function syncMixedCard() {
+      var mixedInput = document.querySelector('#mixedCard input');
+      var isSingles = currentDivision() === 'Singles';
+      document.getElementById('mixedCard').style.display = isSingles ? 'none' : '';
+      if (isSingles && mixedInput.checked) mixedInput.checked = false;
+    }
+
     // ── Wiring ──
     document.querySelectorAll('input[name="division"]').forEach(function(r) {
-      r.addEventListener('change', buildCards);
+      r.addEventListener('change', function() { buildCards(); syncMixedCard(); });
     });
     document.querySelectorAll('input[name="payment"]').forEach(function(r) {
       r.addEventListener('change', updatePayNote);
@@ -1405,8 +1537,9 @@
         lastName: document.getElementById('lastName').value.trim(),
         email: document.getElementById('email').value.trim(),
         division: (document.querySelector('input[name="division"]:checked') || {}).value || '',
+        sex: (document.querySelector('input[name="sex"]:checked') || {}).value || '',
         weights: (document.querySelector('input[name="weights"]:checked') || {}).value || '',
-        expectedTime: document.getElementById('expectedTime').value,
+        heat: selectedSlot,
         homeGym: document.getElementById('homeGym').value.trim(),
         payment: payment,
         comments: document.getElementById('comments').value.trim(),
@@ -1417,6 +1550,7 @@
       if (!data.firstName || !data.lastName) return showError('Please enter your first and last name.');
       if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return showError('Please enter a valid email address.');
       if (!data.division) return showError('Please choose a division.');
+      if (!data.sex) return showError("Please choose a category (Men's, Women's" + (division === 'Singles' ? ')' : ', or Mixed)') + '.');
 
       // Athletes + shirts
       athletes[0].name = registrantName();
@@ -1438,7 +1572,10 @@
       data.total = athletes.length * PRICE;
 
       if (!data.weights) return showError('Please choose a weight category.');
-      if (!data.expectedTime) return showError('Please select an estimated finish time for heat placement.');
+      if (!data.heat) return showError('Please pick your heat time.');
+      if (slotCounts && (slotCounts[data.heat] || 0) >= SLOT_CAP) {
+        return showError('That heat is full — please pick another time.');
+      }
       if (!data.homeGym) return showError('Please tell us what gym you train at.');
       if (!data.payment) return showError('Please choose how you\'ll pay.');
 
@@ -1477,6 +1614,13 @@
           loadingOverlay.classList.remove('active');
           if (resp.status === 'ok') {
             showSuccess(data);
+          } else if (resp.status === 'slot_full') {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'SIGN ME UP';
+            selectedSlot = '';
+            fetchSlots();
+            showError('The ' + data.heat + ' AM heat just filled up — please pick another time.');
+            document.getElementById('slotGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
           } else {
             throw new Error(resp.error || 'Unknown error');
           }
@@ -1518,9 +1662,9 @@
       document.getElementById('successPay').innerHTML = payInstructionsHtml(data);
       var details = document.getElementById('successDetails');
       var rows = [
-        ['Division', data.division],
+        ['Heat Time', data.heat + ' AM'],
+        ['Division', data.sex + ' ' + data.division],
         ['Weights', data.weights],
-        ['Est. Time', data.expectedTime],
         ['Home Gym', data.homeGym],
         ['Payment', data.payment + ' — $' + data.total + (data.athletes.length > 1 ? ' ($' + PRICE + ' each)' : '')]
       ];
@@ -1547,6 +1691,9 @@
       form.reset();
       athletes = [ newAthlete() ];
       buildCards();
+      syncMixedCard();
+      selectedSlot = '';
+      fetchSlots();
       submitBtn.disabled = false;
       submitBtn.textContent = 'SIGN ME UP';
       clearError();
@@ -1588,6 +1735,9 @@
 
     // ── Init ──
     buildCards();
+    syncMixedCard();
+    renderSlots();
+    fetchSlots();
   </script>
 </body>
 </html>
