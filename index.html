@@ -1199,16 +1199,8 @@
 
       </div></div>
 
-      <div class="acc" data-sec="shirts">
-      <button type="button" class="acc-head" data-sec="shirts"><span class="acc-check">✓</span><span class="acc-title">3) Your Shirts</span><span class="acc-sum" id="sum-shirts"></span><span class="acc-chev">▼</span></button>
-      <div class="acc-body">
-      <p class="section-hint" id="shirtHint">Every athlete gets the event shirt — black tee or black crop, your choice of logo color. The preview updates live.</p>
-      <div id="athleteCards"><!-- built by JS --></div>
-
-      </div></div>
-
       <div class="acc" data-sec="weights">
-      <button type="button" class="acc-head" data-sec="weights"><span class="acc-check">✓</span><span class="acc-title">4) Weight Category</span><span class="acc-sum" id="sum-weights"></span><span class="acc-chev">▼</span></button>
+      <button type="button" class="acc-head" data-sec="weights"><span class="acc-check">✓</span><span class="acc-title">3) Weight Category</span><span class="acc-sum" id="sum-weights"></span><span class="acc-chev">▼</span></button>
       <div class="acc-body">
       <div class="field">
         <div class="radio-group" role="radiogroup" aria-label="Weight Category">
@@ -1247,7 +1239,7 @@
       </div></div>
 
       <div class="acc" data-sec="heat">
-      <button type="button" class="acc-head" data-sec="heat"><span class="acc-check">✓</span><span class="acc-title">5) Pick Your Heat</span><span class="acc-sum" id="sum-heat"></span><span class="acc-chev">▼</span></button>
+      <button type="button" class="acc-head" data-sec="heat"><span class="acc-check">✓</span><span class="acc-title">4) Pick Your Heat</span><span class="acc-sum" id="sum-heat"></span><span class="acc-chev">▼</span></button>
       <div class="acc-body">
       <p class="section-hint">Heats go off every 10 minutes, and each heat has <strong style="color:var(--text)">8 lanes split by division</strong> — your whole crew (single, pair, or relay team) races in one lane. Availability below is for <em>your</em> division. Racing with friends in other crews? Pick the same heat time.</p>
       <div class="field">
@@ -1255,6 +1247,13 @@
         <p class="slot-status" id="slotStatus">Checking heat availability…</p>
       </div>
 
+      </div></div>
+
+      <div class="acc" data-sec="shirts">
+      <button type="button" class="acc-head" data-sec="shirts"><span class="acc-check">✓</span><span class="acc-title">5) Your Shirts</span><span class="acc-sum" id="sum-shirts"></span><span class="acc-chev">▼</span></button>
+      <div class="acc-body">
+      <p class="section-hint" id="shirtHint">Every athlete gets the event shirt — black tee or black crop, your choice of logo color. The preview updates live.</p>
+      <div id="athleteCards"><!-- built by JS --></div>
       </div></div>
 
       <div class="acc" data-sec="gym">
@@ -1733,7 +1732,7 @@
     }
 
     // ── Accordion sections (kit-builder style) ──
-    var SECTIONS = ['info', 'division', 'shirts', 'weights', 'heat', 'gym', 'payment', 'extra'];
+    var SECTIONS = ['info', 'division', 'weights', 'heat', 'shirts', 'gym', 'payment', 'extra'];
     var accOpen = 'info';
     var accLastDone = {};
 
@@ -1964,6 +1963,12 @@
       if (!data.division) return showError('Please choose a division.', 'division');
       if (!data.sex) return showError("Please choose a category (Men's, Women's" + (division === 'Singles' ? ')' : ', or Mixed)') + '.', 'division');
 
+      if (!data.weights) return showError('Please choose a weight category.', 'weights');
+      if (!data.heat) return showError('Please pick your heat time.', 'heat');
+      if (groupLeft(data.heat, weightGroup(data.sex, data.weights)) === 0) {
+        return showError('That heat has no more lanes for your division — please pick another time.', 'heat');
+      }
+
       // Athletes + shirts
       athletes[0].name = registrantName();
       for (var i = 0; i < athletes.length; i++) {
@@ -1983,11 +1988,6 @@
       });
       data.total = athletes.length * PRICE;
 
-      if (!data.weights) return showError('Please choose a weight category.', 'weights');
-      if (!data.heat) return showError('Please pick your heat time.', 'heat');
-      if (groupLeft(data.heat, weightGroup(data.sex, data.weights)) === 0) {
-        return showError('That heat has no more lanes for your division — please pick another time.', 'heat');
-      }
       if (!data.homeGym) return showError('Please tell us what gym you train at.', 'gym');
       if (!data.payment) return showError('Please choose how you\'ll pay.', 'payment');
 
