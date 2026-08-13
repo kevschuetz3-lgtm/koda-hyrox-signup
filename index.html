@@ -14,12 +14,12 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0a0a0a;
-      --panel: #141414;
-      --panel-2: #1c1c1c;
-      --border: #2a2a2a;
-      --text: #f5f5f5;
-      --muted: #9a9a9a;
+      --bg: #0b0c0f;
+      --panel: #14161a;
+      --panel-2: #1d2026;
+      --border: #2f323b;
+      --text: #f7f8fa;
+      --muted: #b7bcc5;
       --accent: #d6ff3f;       /* Hyrox lime/yellow */
       --accent-dark: #a8cc1f;
       --error: #f87171;
@@ -31,7 +31,8 @@
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: var(--text);
       min-height: 100vh;
-      line-height: 1.5;
+      line-height: 1.6;
+      font-size: 1.0625rem;
     }
 
     /* ── Hero ── */
@@ -49,9 +50,9 @@
     .hero::before {
       content: '';
       position: absolute;
-      inset: 0;
-      background-image:
-        repeating-linear-gradient(45deg, rgba(214,255,63,0.03) 0 2px, transparent 2px 18px);
+      inset: auto 0 0 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(214,255,63,0.35), transparent);
       pointer-events: none;
     }
 
@@ -96,36 +97,26 @@
       background: var(--accent);
       color: #000;
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.15rem;
-      letter-spacing: 0.18em;
-      padding: 8px 18px;
+      font-size: 1.2rem;
+      letter-spacing: 0.16em;
+      padding: 9px 22px;
       border-radius: 999px;
-      margin-bottom: 18px;
-      box-shadow: 0 0 0 4px rgba(214,255,63,0.18), 0 4px 16px rgba(214,255,63,0.25);
-      animation: badge-pulse 2.4s ease-in-out infinite;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 18px rgba(214,255,63,0.22);
     }
 
     .price-badge .dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       background: #000;
       border-radius: 50%;
-    }
-
-    @keyframes badge-pulse {
-      0%, 100% { box-shadow: 0 0 0 4px rgba(214,255,63,0.18), 0 4px 16px rgba(214,255,63,0.25); }
-      50%      { box-shadow: 0 0 0 8px rgba(214,255,63,0.10), 0 6px 22px rgba(214,255,63,0.40); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .price-badge { animation: none; }
     }
 
     .hero-sub {
       max-width: 640px;
       margin: 0 auto 28px;
       color: var(--muted);
-      font-size: 1.05rem;
+      font-size: 1.1rem;
     }
 
     .hero-sub .shirt-text {
@@ -146,7 +137,8 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.95rem;
+      font-size: 1rem;
+      font-weight: 500;
       color: var(--text);
     }
 
@@ -167,14 +159,70 @@
     .info-card {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-left: 4px solid var(--accent);
-      border-radius: 10px;
-      padding: 18px 20px;
-      margin-bottom: 32px;
-      font-size: 0.95rem;
+      border-radius: 12px;
+      padding: 8px 22px;
+      margin-bottom: 26px;
+      font-size: 1rem;
     }
 
-    .info-card strong { color: var(--accent); }
+    .info-card .info-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 0;
+    }
+
+    .info-card .info-row + .info-row { border-top: 1px solid var(--border); }
+
+    .info-card .info-ico {
+      width: 20px;
+      height: 20px;
+      color: var(--accent);
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    .info-card .info-row strong { color: var(--text); font-weight: 700; }
+
+    .info-card .info-row span { color: var(--muted); }
+
+    /* ── Step progress ── */
+    .progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 0 4px;
+    }
+
+    .progress-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .progress-label strong { color: var(--text); }
+
+    .progress-track {
+      flex: 1;
+      display: flex;
+      gap: 5px;
+    }
+
+    .progress-seg {
+      flex: 1;
+      height: 5px;
+      border-radius: 3px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      transition: background 0.25s ease, border-color 0.25s ease;
+    }
+
+    .progress-seg.on {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
 
     /* ── Form ── */
     form {
@@ -200,8 +248,8 @@
       width: 100%;
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 15px 18px;
+      gap: 13px;
+      padding: 17px 20px;
       background: none;
       border: none;
       cursor: pointer;
@@ -236,8 +284,8 @@
 
     .acc-title {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.2rem;
-      letter-spacing: 0.1em;
+      font-size: 1.32rem;
+      letter-spacing: 0.09em;
       color: var(--text);
       transition: color 0.15s ease;
     }
@@ -246,7 +294,8 @@
 
     .acc-sum {
       margin-left: auto;
-      font-size: 0.8rem;
+      font-size: 0.86rem;
+      font-weight: 500;
       color: var(--muted);
       text-align: right;
       min-width: 0;
@@ -269,7 +318,7 @@
 
     .acc-body {
       display: none;
-      padding: 6px 18px 20px;
+      padding: 10px 20px 22px;
       border-top: 1px solid var(--border);
     }
 
@@ -282,9 +331,9 @@
     }
 
     .section-hint {
-      font-size: 0.85rem;
+      font-size: 0.95rem;
       color: var(--muted);
-      margin: -10px 0 14px;
+      margin: -2px 0 16px;
     }
 
     .field { margin-bottom: 16px; }
@@ -314,7 +363,7 @@
     textarea,
     select {
       width: 100%;
-      padding: 12px 14px;
+      padding: 13px 15px;
       background: var(--panel-2);
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -323,6 +372,8 @@
       font-size: 1rem;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
+
+    ::placeholder { color: #8a8f99; opacity: 1; }
 
     select {
       appearance: none;
@@ -373,24 +424,24 @@
       align-items: center;
       justify-content: center;
       gap: 4px;
-      padding: 14px 12px;
+      padding: 15px 12px;
       background: var(--panel-2);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 9px;
       text-align: center;
       transition: all 0.15s ease;
-      min-height: 70px;
+      min-height: 76px;
     }
 
     .radio-card .card-title {
       font-family: 'Bebas Neue', sans-serif;
       letter-spacing: 0.08em;
-      font-size: 1.1rem;
+      font-size: 1.2rem;
       color: var(--text);
     }
 
     .radio-card .card-sub {
-      font-size: 0.75rem;
+      font-size: 0.84rem;
       color: var(--muted);
     }
 
@@ -518,12 +569,13 @@
       position: absolute;
       left: 8px;
       bottom: 8px;
-      background: rgba(0,0,0,0.72);
+      background: rgba(0,0,0,0.78);
       color: #fff;
-      font-size: 0.72rem;
-      letter-spacing: 0.08em;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
       text-transform: uppercase;
-      padding: 4px 9px;
+      padding: 5px 10px;
       border-radius: 6px;
       pointer-events: none;
     }
@@ -573,8 +625,8 @@
     .swatch.sel .tick { display: flex; }
 
     .swatch-name {
-      margin-top: 8px;
-      font-size: 0.82rem;
+      margin-top: 9px;
+      font-size: 0.92rem;
       color: var(--muted);
     }
 
@@ -588,7 +640,7 @@
     }
 
     .slot {
-      padding: 10px 6px 8px;
+      padding: 12px 6px 10px;
       background: var(--panel-2);
       border: 1px solid var(--border);
       border-radius: 9px;
@@ -613,7 +665,7 @@
 
     .slot .t {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.15rem;
+      font-size: 1.3rem;
       letter-spacing: 0.06em;
       color: var(--text);
     }
@@ -622,11 +674,12 @@
 
     .slot .left {
       display: block;
-      font-size: 0.68rem;
+      font-size: 0.78rem;
+      font-weight: 600;
       color: var(--muted);
-      margin-top: 2px;
+      margin-top: 3px;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
 
     .slot .left.warn { color: #f3c34c; }
@@ -634,20 +687,20 @@
     .slot.full .left { color: var(--error); }
 
     .slot-status {
-      font-size: 0.8rem;
+      font-size: 0.9rem;
       color: var(--muted);
-      margin-top: 10px;
+      margin-top: 12px;
       text-align: center;
     }
 
     /* ── Payment cards ── */
     .pay-note {
       margin-top: 12px;
-      padding: 13px 15px;
+      padding: 14px 16px;
       background: rgba(214,255,63,0.07);
       border: 1px solid var(--border);
       border-radius: 9px;
-      font-size: 0.88rem;
+      font-size: 0.95rem;
       color: var(--text);
       display: none;
     }
@@ -669,14 +722,14 @@
       background: var(--panel-2);
       border: 1px solid var(--border);
       border-radius: 9px;
-      padding: 12px 16px;
+      padding: 13px 17px;
       margin-bottom: 14px;
-      font-size: 0.95rem;
+      font-size: 1rem;
     }
 
     .bill-line .amt {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       letter-spacing: 0.05em;
       color: var(--accent);
     }
@@ -728,11 +781,11 @@
     }
 
     .weights-ref-caption {
-      font-size: 0.8rem;
+      font-size: 0.88rem;
       color: var(--muted);
       text-align: center;
-      margin-top: 8px;
-      letter-spacing: 0.04em;
+      margin-top: 9px;
+      letter-spacing: 0.03em;
     }
 
     /* ── Lightbox ── */
@@ -807,18 +860,19 @@
     .submit-btn {
       display: block;
       width: 100%;
-      margin-top: 28px;
-      padding: 16px;
+      margin-top: 26px;
+      padding: 17px;
       background: var(--accent);
       color: #000;
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.3rem;
+      font-size: 1.4rem;
       letter-spacing: 0.12em;
       font-weight: 400;
       border: none;
       border-radius: 10px;
       cursor: pointer;
       transition: all 0.15s;
+      box-shadow: 0 4px 16px rgba(214,255,63,0.18);
     }
 
     .submit-btn:hover:not(:disabled) {
@@ -888,11 +942,11 @@
     .success-details {
       background: var(--panel-2);
       border-radius: 8px;
-      padding: 16px;
+      padding: 18px;
       margin: 0 auto 20px;
-      max-width: 440px;
+      max-width: 460px;
       text-align: left;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
     }
 
     .success-details .row {
@@ -916,11 +970,11 @@
       background: rgba(214,255,63,0.07);
       border: 1px solid var(--accent-dark);
       border-radius: 10px;
-      padding: 18px;
+      padding: 20px;
       margin: 0 auto 24px;
-      max-width: 440px;
+      max-width: 460px;
       text-align: left;
-      font-size: 0.92rem;
+      font-size: 0.98rem;
     }
 
     .success-pay h3 {
@@ -973,9 +1027,9 @@
     /* ── Footer ── */
     footer {
       text-align: center;
-      padding: 24px 20px 40px;
+      padding: 26px 20px 42px;
       color: var(--muted);
-      font-size: 0.85rem;
+      font-size: 0.92rem;
       border-top: 1px solid var(--border);
     }
 
@@ -1047,7 +1101,23 @@
   <!-- ═══ FORM ═══ -->
   <main class="container">
     <div class="info-card" id="infoCard">
-      <strong>$25 per athlete &middot; event shirt included.</strong> Choose Singles, Doubles, or a 4-person Relay — on a team, <strong>every athlete pays $25 and every athlete gets a shirt</strong>. Then <strong>pick your heat time</strong>: heats go off every 10 minutes from 9:00 to 11:50 AM, with 8 spots per heat.
+      <div class="info-row">
+        <svg class="info-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <div><strong>$25 per athlete — event shirt included.</strong> <span>Pick your shirt style and logo color when you sign up.</span></div>
+      </div>
+      <div class="info-row">
+        <svg class="info-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <div><strong>Singles, Doubles, or 4-person Relay.</strong> <span>On a team, every athlete pays $25 and every athlete gets a shirt.</span></div>
+      </div>
+      <div class="info-row">
+        <svg class="info-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div><strong>You choose your heat time.</strong> <span>Heats go off every 10 minutes, 9:00–11:50 AM — live availability as you book.</span></div>
+      </div>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap" aria-hidden="true">
+      <span class="progress-label" id="progressLabel"></span>
+      <div class="progress-track" id="progressTrack"></div>
     </div>
 
     <form id="signupForm" novalidate>
@@ -1715,6 +1785,26 @@
       }
     }
 
+    var REQUIRED_SECTIONS = SECTIONS.slice(0, 7); // everything except the optional last card
+
+    function renderProgress() {
+      var track = document.getElementById('progressTrack');
+      if (!track.children.length) {
+        REQUIRED_SECTIONS.forEach(function() {
+          var seg = document.createElement('div');
+          seg.className = 'progress-seg';
+          track.appendChild(seg);
+        });
+      }
+      var done = REQUIRED_SECTIONS.filter(secDone).length;
+      Array.prototype.forEach.call(track.children, function(seg, i) {
+        seg.classList.toggle('on', i < done);
+      });
+      document.getElementById('progressLabel').innerHTML = done === REQUIRED_SECTIONS.length
+        ? '<strong>Ready to submit ✓</strong>'
+        : '<strong>' + done + ' of ' + REQUIRED_SECTIONS.length + '</strong> steps done';
+    }
+
     function accRender() {
       SECTIONS.forEach(function(k) {
         var card = document.querySelector('.acc[data-sec="' + k + '"]');
@@ -1724,6 +1814,7 @@
         var sum = document.getElementById('sum-' + k);
         if (sum) sum.textContent = secSummary(k);
       });
+      renderProgress();
     }
 
     function openSec(key) {
@@ -1980,6 +2071,7 @@
     function showSuccess(data) {
       document.getElementById('signupForm').style.display = 'none';
       document.getElementById('infoCard').style.display = 'none';
+      document.getElementById('progressWrap').style.display = 'none';
       document.getElementById('successPay').innerHTML = payInstructionsHtml(data);
       var details = document.getElementById('successDetails');
       var rows = [
@@ -2009,6 +2101,7 @@
       document.getElementById('successMsg').classList.remove('show');
       document.getElementById('signupForm').style.display = 'block';
       document.getElementById('infoCard').style.display = 'block';
+      document.getElementById('progressWrap').style.display = '';
       form.reset();
       athletes = [ newAthlete() ];
       buildCards();
