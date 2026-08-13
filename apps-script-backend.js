@@ -480,6 +480,15 @@ function sim0913WeightSetup(sex, weights) {
 
 // Count non-test signups per heat slot, split by lane type (weight group).
 // Group is the first word of the stored "Weights Setup" column.
+// NOTE: Sheets coerces "11:50" to a time-of-day Date when the row is
+// appended, so normalize whatever comes back into "H:MM".
+function sim0913NormalizeHeat(v) {
+  if (v instanceof Date) {
+    return v.getHours() + ":" + ("0" + v.getMinutes()).slice(-2);
+  }
+  return String(v || "").trim();
+}
+
 function sim0913SlotCounts() {
   var ss = getOrCreateSim0913Spreadsheet();
   var sheet = ss.getSheetByName("Signups");
@@ -490,7 +499,7 @@ function sim0913SlotCounts() {
   });
   rows.forEach(function(r) {
     var registrant = String(r[1] || "");
-    var heat = String(r[8] || "").trim();
+    var heat = sim0913NormalizeHeat(r[8]);
     var g = String(r[6] || "").split(" ")[0]; // "Red"/"Green"/"Blue"/"Scaled"
     if (/test/i.test(registrant)) return;
     if (counts.hasOwnProperty(heat) && counts[heat].hasOwnProperty(g)) {
