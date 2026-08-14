@@ -798,6 +798,12 @@ function doGet(e) {
       .createTextOutput(JSON.stringify(sim0913FixHeaders()))
       .setMimeType(ContentService.MimeType.JSON);
   }
+  if (action === "sim0913Info") {
+    var ss0913 = getOrCreateSim0913Spreadsheet();
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "ok", name: ss0913.getName(), url: ss0913.getUrl() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   return ContentService
     .createTextOutput(JSON.stringify({ status: "ok", message: "Hyrox Simulation signup API running" }))
     .setMimeType(ContentService.MimeType.JSON);
