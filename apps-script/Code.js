@@ -462,9 +462,43 @@ var SIM0913_SIGNUP_HEADERS = [
   "Timestamp", "Registrant", "Email", "Division", "Sex", "Weights", "Weights Setup",
   "Home Gym", "Heat", "Athletes", "Shirts", "Payment Method", "Total Due", "Paid?", "Comments"
 ];
+// NOTE: "Email" is appended LAST on purpose — it was added after the sheet
+// had real data, and appending keeps every existing column in place. Rows
+// are written by header name, so the column can be dragged anywhere.
 var SIM0913_SHIRT_HEADERS = [
-  "Timestamp", "Athlete", "Garment", "Size", "Logo Color", "Registrant", "Division", "Payment Method"
+  "Timestamp", "Athlete", "Garment", "Size", "Logo Color", "Registrant", "Division", "Payment Method", "Email"
 ];
+
+// Header-aligned sheet IO: rows are written/read by matching the header
+// text in row 1, so Kevin can reorder/resize columns freely. Don't RENAME
+// headers — matching is by name (a missing header falls back to the
+// canonical column position for reads, and drops the value for writes).
+function sim0913HeaderMap(sheet) {
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var map = {};
+  for (var i = 0; i < headers.length; i++) {
+    var k = String(headers[i]).trim().toLowerCase();
+    if (k && map[k] === undefined) map[k] = i;
+  }
+  return map;
+}
+
+function sim0913Col(map, name, fallback) {
+  return map[name] === undefined ? fallback : map[name];
+}
+
+function sim0913AppendAligned(sheet, record) {
+  var map = sim0913HeaderMap(sheet);
+  var width = sheet.getLastColumn();
+  var row = [];
+  for (var i = 0; i < width; i++) row.push("");
+  for (var key in record) {
+    var idx = map[key];
+    if (idx !== undefined && idx < width) row[idx] = record[key];
+  }
+  sheet.appendRow(row);
+}
 
 // Which weight setup a category uses (per the "Heat Times" tab legend):
 // Blue 225/172/35/22/9·9ft, Green 335/227/53/44/14·10ft, Red 445/337/70/66/20·10ft.
@@ -497,10 +531,14 @@ function sim0913SlotCounts() {
   SIM0913_SLOTS.forEach(function(s) {
     counts[s] = { "Red": 0, "Green": 0, "Blue": 0, "Scaled": 0 };
   });
+  var map = sim0913HeaderMap(sheet);
+  var iReg = sim0913Col(map, "registrant", 1);
+  var iSetup = sim0913Col(map, "weights setup", 6);
+  var iHeat = sim0913Col(map, "heat", 8);
   rows.forEach(function(r) {
-    var registrant = String(r[1] || "");
-    var heat = sim0913NormalizeHeat(r[8]);
-    var g = String(r[6] || "").split(" ")[0]; // "Red"/"Green"/"Blue"/"Scaled"
+    var registrant = String(r[iReg] || "");
+    var heat = sim0913NormalizeHeat(r[iHeat]);
+    var g = String(r[iSetup] || "").split(" ")[0]; // "Red"/"Green"/"Blue"/"Scaled"
     if (/test/i.test(registrant)) return;
     if (counts.hasOwnProperty(heat) && counts[heat].hasOwnProperty(g)) {
       counts[heat][g]++;
@@ -609,21 +647,45 @@ function handleSim0913(data) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    signups.appendRow([
-      now, registrant, data.email || "", data.division || "", data.sex || "",
-      data.weights || "", setup, data.homeGym || "", slot, athletes.length,
-      shirtLines, data.payment || "", "$" + total, "", data.comments || ""
-    ]);
+    sim0913AppendAligned(signups, {
+      "timestamp": now,
+      "registrant": registrant,
+      "email": data.email || "",
+      "division": data.division || "",
+      "sex": data.sex || "",
+      "weights": data.weights || "",
+      "weights setup": setup,
+      "home gym": data.homeGym || "",
+      "heat": slot,
+      "athletes": athletes.length,
+      "shirts": shirtLines,
+      "payment method": data.payment || "",
+      "total due": "$" + total,
+      "comments": data.comments || ""
+    });
   } finally {
     lock.releaseLock();
   }
 
-  athletes.forEach(function(a) {
-    shirts.appendRow([
-      now, a.name || "", a.garment || "", a.size || "", a.color || "",
-      registrant, data.division || "", data.payment || ""
-    ]);
+  athletes.forEach(function(a, ai) {
+    sim0913AppendAligned(shirts, {
+      "timestamp": now,
+      "athlete": a.name || "",
+      "garment": a.garment || "",
+      "size": a.size || "",
+      "logo color": a.color || "",
+      "registrant": registrant,
+      "division": data.division || "",
+      "payment method": data.payment || "",
+      "email": (ai === 0 ? (data.email || "") : (a.email || ""))
+    });
   });
+
+  // Teammates who supplied an email get copied on the confirmation, so the
+  // whole crew has the heat time and payment instructions.
+  var teammateEmails = athletes.slice(1)
+    .map(function(a) { return String(a.email || "").trim(); })
+    .filter(function(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); });
 
   // Inline mockup images (rendered client-side, base64 JPEG)
   var inlineImages = {};
@@ -647,7 +709,9 @@ function handleSim0913(data) {
     row("Home Gym", data.homeGym || "") +
     row("Payment", (data.payment || "") + " — $" + total + (athletes.length > 1 ? " ($" + SIM0913_PRICE + " each)" : "")) +
     athletes.map(function(a, i) {
-      return row("Athlete " + (i + 1), a.name + " · " + a.garment + " · " + a.size + " · " + a.color + " logo");
+      var mail = i === 0 ? (data.email || "") : (a.email || "");
+      return row("Athlete " + (i + 1), a.name + " · " + a.garment + " · " + a.size + " · " + a.color + " logo" +
+        (mail ? " · " + mail : ""));
     }).join("") +
     (data.comments ? row("Comments", data.comments) : "") +
     "</table>";
@@ -655,7 +719,7 @@ function handleSim0913(data) {
   // Confirmation to the registrant
   if (data.email) {
     try {
-      MailApp.sendEmail({
+      var mailOpts = {
         to: data.email,
         replyTo: NOTIFY_EMAIL,
         subject: "You're in! " + SIM0913_EVENT + " — Koda CrossFit Iron View",
@@ -665,13 +729,19 @@ function handleSim0913(data) {
           "<p>You're signed up for the <strong>" + SIM0913_EVENT + "</strong> at Koda CrossFit Iron View, " +
           "740 S Pierce Ave, Louisville, CO. <strong>Your heat goes off at " + slot + " AM</strong> — " +
           "plan to arrive early to check in and warm up.</p>" +
+          (teammateEmails.length
+            ? "<p style='color:#555'>" + (teammateEmails.length === 1 ? "Your teammate is" : "Your teammates are") +
+              " copied on this email, so everyone has the heat time and payment details.</p>"
+            : "") +
           "<div style='background:#f6f6f6;border-radius:10px;padding:14px 16px;margin:14px 0'>" + sim0913PayHtml(data) + "</div>" +
           detailsTable +
           (mockupHtml ? "<h3 style='margin-top:18px'>Your shirts</h3>" + mockupHtml : "") +
           "<p style='color:#777;font-size:13px;margin-top:18px'>Questions? Just reply to this email.</p>" +
           "</div>",
         inlineImages: inlineImages
-      });
+      };
+      if (teammateEmails.length) mailOpts.cc = teammateEmails.join(",");
+      MailApp.sendEmail(mailOpts);
     } catch (mailErr) {
       Logger.log("Sim0913 confirmation email failed: " + mailErr);
     }
@@ -716,11 +786,15 @@ function sim0913ShirtTally() {
   var SIZES = { "Unisex Tee": ["XS","S","M","L","XL","2XL","3XL"], "Cropped Tee": ["S","M","L","XL","2XL"] };
   var COLORS = ["Gold","Hot Pink","Lime Green","Bright Blue","Lavender","Red","Orange","Silver","White"];
 
+  var map = sim0913HeaderMap(shirts);
+  var iAth = sim0913Col(map, "athlete", 1), iGar = sim0913Col(map, "garment", 2),
+      iSize = sim0913Col(map, "size", 3), iCol = sim0913Col(map, "logo color", 4),
+      iReg = sim0913Col(map, "registrant", 5);
   var counts = {}; // garment|color|size -> n
   var totalShirts = 0;
   rows.forEach(function(r) {
-    var athlete = String(r[1] || ""), garment = String(r[2] || ""), size = String(r[3] || ""), color = String(r[4] || "");
-    var reg = String(r[5] || "");
+    var athlete = String(r[iAth] || ""), garment = String(r[iGar] || ""), size = String(r[iSize] || ""), color = String(r[iCol] || "");
+    var reg = String(r[iReg] || "");
     if (/test/i.test(athlete) || /test/i.test(reg)) return; // skip test rows
     if (!garment) return;
     var k = garment + "|" + color + "|" + size;
@@ -796,6 +870,60 @@ function doGet(e) {
   if (action === "sim0913FixHeaders") {
     return ContentService
       .createTextOutput(JSON.stringify(sim0913FixHeaders()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  // Audit (read-only): find leftover QA rows on either tab — anything whose
+  // athlete/registrant looks like a test or the "Canary" verification row.
+  // Reports sheet row numbers so they can be deleted by hand. The canary
+  // matters most: its name has no "test", so the tally COUNTS it.
+  if (action === "sim0913Leftovers") {
+    var ssL = getOrCreateSim0913Spreadsheet();
+    var pat = /test|canary|deleteme|delete me|please.?ignore/i;
+    var found = [];
+    [["Signups", "registrant"], ["Shirts", "athlete"]].forEach(function(pair) {
+      var shL = ssL.getSheetByName(pair[0]);
+      if (!shL) return;
+      var mapL = sim0913HeaderMap(shL);
+      var iA = sim0913Col(mapL, pair[1], 1);
+      var iR = sim0913Col(mapL, "registrant", pair[0] === "Shirts" ? 5 : 1);
+      shL.getDataRange().getValues().slice(1).forEach(function(r, idx) {
+        var who = String(r[iA] || ""), reg = String(r[iR] || "");
+        if (pat.test(who) || pat.test(reg)) {
+          found.push({ tab: pair[0], row: idx + 2, who: who, registrant: reg,
+                       countedInTally: !/test/i.test(who) && !/test/i.test(reg) });
+        }
+      });
+    });
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "ok", leftovers: found }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  // Debug: dump rows whose Registrant matches /test/i, keyed by header
+  // (only ever exposes our own test rows, never real athletes).
+  if (action === "sim0913TestRows") {
+    var ssT = getOrCreateSim0913Spreadsheet();
+    var shT = ssT.getSheetByName("Signups");
+    var headT = shT.getRange(1, 1, 1, shT.getLastColumn()).getValues()[0];
+    var iRegT = sim0913Col(sim0913HeaderMap(shT), "registrant", 1);
+    var outT = shT.getDataRange().getValues().slice(1)
+      .filter(function(r) { return /test/i.test(String(r[iRegT] || "")); })
+      .map(function(r) {
+        var o = {};
+        headT.forEach(function(h, i) { if (String(r[i]) !== "") o[h] = String(r[i]); });
+        return o;
+      });
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: "ok", rows: outT }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913Health") {
+    var ssH = getOrCreateSim0913Spreadsheet();
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        status: "ok",
+        signupsRows: ssH.getSheetByName("Signups").getLastRow() - 1,
+        shirtsRows: ssH.getSheetByName("Shirts").getLastRow() - 1
+      }))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if (action === "sim0913Info") {

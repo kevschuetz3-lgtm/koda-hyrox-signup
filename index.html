@@ -358,6 +358,19 @@
 
     label .req { color: var(--accent); margin-left: 2px; }
 
+    label .optional-tag {
+      margin-left: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 1px 8px;
+      text-transform: uppercase;
+    }
+
     input[type="text"],
     input[type="email"],
     textarea,
@@ -1403,7 +1416,7 @@
     var athletes = [ newAthlete() ];
 
     function newAthlete() {
-      return { name: '', garment: 'tee', size: '', colorId: 'lime' };
+      return { name: '', email: '', garment: 'tee', size: '', colorId: 'lime' };
     }
 
     function colorById(id) {
@@ -1496,6 +1509,23 @@
           inp.addEventListener('blur', accPing);
           nf.appendChild(inp);
           card.appendChild(nf);
+
+          // Optional teammate email — if given, they're copied on the
+          // confirmation (heat time + payment instructions).
+          var ef = document.createElement('div');
+          ef.className = 'field';
+          ef.innerHTML = '<label for="athleteEmail' + i + '">' +
+            (currentDivision() === 'Doubles' ? "Partner's Email" : 'Teammate ' + i + ' Email') +
+            ' <span class="optional-tag">optional</span></label>';
+          var einp = document.createElement('input');
+          einp.type = 'email';
+          einp.id = 'athleteEmail' + i;
+          einp.placeholder = 'So they get the heat time + payment info';
+          einp.autocomplete = 'off';
+          einp.value = a.email;
+          einp.addEventListener('input', function() { a.email = einp.value.trim(); });
+          ef.appendChild(einp);
+          card.appendChild(ef);
         }
 
         var grid = document.createElement('div');
@@ -1971,14 +2001,20 @@
 
       // Athletes + shirts
       athletes[0].name = registrantName();
+      athletes[0].email = data.email;
       for (var i = 0; i < athletes.length; i++) {
         var a = athletes[i];
         if (!a.name) return showError('Please enter a name for Athlete ' + (i + 1) + '.', 'shirts');
         if (!a.size) return showError('Please pick a shirt size for ' + (i === 0 ? 'yourself' : a.name) + '.', 'shirts');
+        // Teammate emails are optional — but if one is filled in, it has to be valid.
+        if (i > 0 && a.email && !validEmail(a.email)) {
+          return showError("That doesn't look like a valid email for " + a.name + " — fix it or leave it blank.", 'shirts');
+        }
       }
       data.athletes = athletes.map(function(a) {
         return {
           name: a.name,
+          email: a.email || '',
           garment: GARMENTS[a.garment].name,
           garmentId: a.garment,
           size: a.size,
@@ -2087,6 +2123,11 @@
       details.innerHTML = rows.map(function(r) {
         return '<div class="row"><span class="label-k">' + r[0] + '</span><span class="val">' + escapeHtml(r[1]) + '</span></div>';
       }).join('');
+      var cc = data.athletes.slice(1).filter(function(a) { return a.email; }).length;
+      document.getElementById('successFoot').textContent = cc
+        ? 'A confirmation with your heat time and shirt order is on its way to your inbox — ' +
+          (cc === 1 ? 'your teammate is' : 'your ' + cc + ' teammates are') + ' copied on it too.'
+        : 'A confirmation with your heat time and shirt order is on its way to your inbox.';
       document.getElementById('successMsg').classList.add('show');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
