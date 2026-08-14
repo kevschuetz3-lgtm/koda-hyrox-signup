@@ -537,6 +537,9 @@
       height: auto;
     }
 
+    /* while a newly picked garment's layers are still downloading */
+    .mock.loading { opacity: 0.5; transition: opacity 0.15s ease; }
+
     .mock .ink {
       position: absolute;
       inset: 0;
@@ -1402,12 +1405,17 @@
       { id: 'white',    name: 'White',       hex: '#FFFFFF' }
     ];
 
-    // logoY = vertical span of the wordmark in the frame (for gradient placement)
+    // Each garment renders in three layers: the blank black shirt (base), the
+    // HYROX wordmark (mask, tinted to the chosen vinyl), and "KODA CROSSFIT"
+    // (koda, always white). logoY = vertical span of the HYROX line in the
+    // frame, used to place the metallic gradients.
     var GARMENTS = {
       tee:  { name: 'Unisex Tee',  sub: 'Bella+Canvas 3001', sizes: ['XS','S','M','L','XL','2XL','3XL'],
-              base: 'assets/mockups/tee-base.jpg',  mask: 'assets/mockups/tee-mask.png',  logoY: [0.327, 0.380] },
+              base: 'assets/mockups/tee-base.jpg',  mask: 'assets/mockups/tee-hyrox.png',
+              koda: 'assets/mockups/tee-koda.png',  logoY: [0.2938, 0.3945] },
       crop: { name: 'Cropped Tee', sub: 'Bella+Canvas 8882', sizes: ['S','M','L','XL','2XL'],
-              base: 'assets/mockups/crop-base.jpg', mask: 'assets/mockups/crop-mask.png', logoY: [0.410, 0.481] }
+              base: 'assets/mockups/crop-base.jpg', mask: 'assets/mockups/crop-hyrox.png',
+              koda: 'assets/mockups/crop-koda.png', logoY: [0.3662, 0.4981] }
     };
 
     var DIVISION_COUNT = { 'Singles': 1, 'Doubles': 2, 'Team of 4 Relay': 4 };
@@ -1538,6 +1546,7 @@
           '<div class="mock" id="mock' + i + '">' +
             '<img class="base" id="mockBase' + i + '" alt="Shirt mockup">' +
             '<div class="ink" id="mockInk' + i + '"></div>' +
+            '<div class="ink koda" id="mockKoda' + i + '"></div>' +
             '<div class="sheen" id="mockSheen' + i + '"></div>' +
           '</div>' +
           '<span class="mock-caption" id="mockCap' + i + '"></span>';
@@ -1644,21 +1653,51 @@
       el.textContent = 'ATHLETE ' + (i + 1) + (nm ? ' — ' + nm.toUpperCase() : '');
     }
 
+    // Garment swaps wait for the new layers to arrive before repainting: an
+    // unloaded CSS mask-image hides its layer entirely, so painting eagerly
+    // would flash the OLD garment with no logo on it. Same-garment colour
+    // changes hit the cache and repaint in the same tick.
+    var paintToken = [];
+
     function paintMock(i) {
       var a = athletes[i];
       var g = GARMENTS[a.garment];
       var c = colorById(a.colorId);
-      document.getElementById('mockBase' + i).src = g.base;
-      var ink = document.getElementById('mockInk' + i);
-      ink.style.webkitMaskImage = 'url(' + g.mask + ')';
-      ink.style.maskImage = 'url(' + g.mask + ')';
-      ink.style.background = cssFill(c, a.garment);
-      var sheen = document.getElementById('mockSheen' + i);
-      sheen.style.webkitMaskImage = 'url(' + g.mask + ')';
-      sheen.style.maskImage = 'url(' + g.mask + ')';
-      sheen.classList.toggle('on', !!c.stops);
-      document.getElementById('mockCap' + i).textContent = g.name + ' · ' + c.name;
+      var token = (paintToken[i] = (paintToken[i] || 0) + 1);
+      var mockEl = document.getElementById('mock' + i);
+      var ready = !!(imgCache[g.base] && imgCache[g.mask] && imgCache[g.koda]);
+      if (!ready && mockEl) mockEl.classList.add('loading');
+
+      Promise.all([loadImg(g.base), loadImg(g.mask), loadImg(g.koda)])
+        .catch(function() { return null; })   // paint anyway if a layer 404s
+        .then(function() {
+          if (paintToken[i] !== token) return; // a newer pick superseded this one
+          if (mockEl) mockEl.classList.remove('loading');
+          document.getElementById('mockBase' + i).src = g.base;
+          var ink = document.getElementById('mockInk' + i);
+          ink.style.webkitMaskImage = 'url(' + g.mask + ')';
+          ink.style.maskImage = 'url(' + g.mask + ')';
+          ink.style.background = cssFill(c, a.garment);
+          var koda = document.getElementById('mockKoda' + i);
+          koda.style.webkitMaskImage = 'url(' + g.koda + ')';
+          koda.style.maskImage = 'url(' + g.koda + ')';
+          koda.style.background = '#ffffff';
+          var sheen = document.getElementById('mockSheen' + i);
+          sheen.style.webkitMaskImage = 'url(' + g.mask + ')';
+          sheen.style.maskImage = 'url(' + g.mask + ')';
+          sheen.classList.toggle('on', !!c.stops);
+          document.getElementById('mockCap' + i).textContent = g.name + ' · ' + c.name;
+        });
+
       if (typeof accPing === 'function') accPing();
+    }
+
+    // Warm every garment's layers up front so the first swap is instant.
+    function preloadMockAssets() {
+      Object.keys(GARMENTS).forEach(function(gid) {
+        var g = GARMENTS[gid];
+        loadImg(g.base); loadImg(g.mask); loadImg(g.koda);
+      });
     }
 
     // ── Bill + payment note ──
@@ -1925,9 +1964,10 @@
     function renderMockJpeg(athlete) {
       var g = GARMENTS[athlete.garment];
       var c = colorById(athlete.colorId);
-      return Promise.all([loadImg(g.base), loadImg(g.mask)]).then(function(imgs) {
-        var base = imgs[0], mask = imgs[1];
+      return Promise.all([loadImg(g.base), loadImg(g.mask), loadImg(g.koda)]).then(function(imgs) {
+        var base = imgs[0], mask = imgs[1], kodaMask = imgs[2];
         var W = 640, H = Math.round(base.height * (W / base.width));
+        // HYROX wordmark in the chosen vinyl
         var mc = document.createElement('canvas'); mc.width = W; mc.height = H;
         var mx = mc.getContext('2d');
         mx.drawImage(mask, 0, 0, W, H);
@@ -1940,10 +1980,19 @@
           mx.fillStyle = c.hex;
         }
         mx.fillRect(0, 0, W, H);
+        // KODA CROSSFIT always white
+        var kc = document.createElement('canvas'); kc.width = W; kc.height = H;
+        var kx = kc.getContext('2d');
+        kx.drawImage(kodaMask, 0, 0, W, H);
+        kx.globalCompositeOperation = 'source-in';
+        kx.fillStyle = '#ffffff';
+        kx.fillRect(0, 0, W, H);
+
         var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
         var cx = cv.getContext('2d');
         cx.drawImage(base, 0, 0, W, H);
         cx.drawImage(mc, 0, 0);
+        cx.drawImage(kc, 0, 0);
         return cv.toDataURL('image/jpeg', 0.85).split(',')[1];
       });
     }
@@ -2192,6 +2241,7 @@
     });
 
     // ── Init ──
+    preloadMockAssets();
     buildCards();
     syncMixedCard();
     renderSlots();
