@@ -12,7 +12,7 @@ Single-page signup form for the Hyrox Simulation at Koda CrossFit Iron View on *
 - Registrant gets a confirmation email with their heat time, payment instructions + canvas-rendered shirt mockups; kevschuetz3@gmail.com gets a notification. On doubles/relay signups, **teammates who supplied an optional email are CC'd** on that confirmation.
 - Handy read-only actions: `?action=sim0913Info` (sheet name + URL), `?action=sim0913Health` (row counts), `?action=sim0913Leftovers` (finds stray QA/test rows by sheet row number).
 - **Shirt tally for the printer:** open `<exec-url>?action=shirtTally0913` — rebuilds a "Shirt Tally" tab (garment × color × size, skips rows with "test" in a name). When emailing the printer, CC lasakcatherine@gmail.com.
-- Shirt mockup assets live in `assets/mockups/` (`*-base.jpg` = garment with logo removed, `*-mask.png` = logo alpha mask tinted live). Vinyl hexes were sampled from the exact HTVRONT Amazon listings; Gold + Silver render as metallic gradients.
+- Shirt mockup assets live in `assets/mockups/` — three layers per garment: `*-base.jpg` (blank black shirt), `*-hyrox.png` (wordmark mask, tinted to the chosen vinyl), `*-koda.png` ("KODA CROSSFIT", always white). Source artwork is `assets/source/HYROX-Designs-01.ai`; rebuild with the scripts in `tools/` (see `tools/README.md`).
 - Payment: Venmo @kevin-schuetz-5 / Zelle kodaironview@gmail.com / Zen Planner CC product `5F4A8380-AC28-409B-A664-E088BB910ED0` ($25, each athlete pays their own).
 - `?action=sim0913FixHeaders` rewrites the header rows of both tabs to match the code (safe to re-run; used once when the heat/category columns were added).
 - `feedback.html` and `class-times.html` are left over from the June event (unlinked but live).
