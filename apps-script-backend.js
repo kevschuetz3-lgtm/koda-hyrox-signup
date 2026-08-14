@@ -500,6 +500,96 @@ function sim0913AppendAligned(sheet, record) {
   sheet.appendRow(row);
 }
 
+var SIM0913_COLORS = ["Gold", "Hot Pink", "Lime Green", "Bright Blue", "Lavender", "Red", "Orange", "Silver", "White"];
+
+// Read-only: find an athlete across both tabs (matches on the Shirts tab's
+// "Athlete" and the Signups tab's "Registrant"), returning sheet row numbers
+// and current values so a change can be reviewed before it is made.
+function sim0913FindAthlete(q) {
+  var needle = String(q || "").trim().toLowerCase();
+  if (!needle) return { status: "error", error: "no query" };
+  var ss = getOrCreateSim0913Spreadsheet();
+  var out = { status: "ok", query: q, shirts: [], signups: [] };
+
+  var sh = ss.getSheetByName("Shirts");
+  var smap = sim0913HeaderMap(sh);
+  var sHead = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  sh.getDataRange().getValues().slice(1).forEach(function(r, i) {
+    var athlete = String(r[sim0913Col(smap, "athlete", 1)] || "");
+    if (athlete.trim().toLowerCase().indexOf(needle) === -1) return;
+    var o = { row: i + 2 };
+    sHead.forEach(function(h, ci) { if (h) o[h] = String(r[ci]); });
+    out.shirts.push(o);
+  });
+
+  var sg = ss.getSheetByName("Signups");
+  var gmap = sim0913HeaderMap(sg);
+  var iReg = sim0913Col(gmap, "registrant", 1), iShirts = sim0913Col(gmap, "shirts", 10);
+  sg.getDataRange().getValues().slice(1).forEach(function(r, i) {
+    var reg = String(r[iReg] || ""), shirts = String(r[iShirts] || "");
+    if (reg.trim().toLowerCase().indexOf(needle) === -1 && shirts.toLowerCase().indexOf(needle) === -1) return;
+    out.signups.push({
+      row: i + 2, registrant: reg, division: String(r[sim0913Col(gmap, "division", 3)] || ""),
+      heat: sim0913NormalizeHeat(r[sim0913Col(gmap, "heat", 8)]), shirts: shirts,
+    });
+  });
+  return out;
+}
+
+// Change one athlete's logo color on the Shirts tab AND inside the matching
+// "Shirts" summary line on their Signups row, so the print order and the
+// registration row can never disagree. Returns exactly what it changed.
+function sim0913SetColor(q, color) {
+  var needle = String(q || "").trim().toLowerCase();
+  var newColor = null;
+  for (var i = 0; i < SIM0913_COLORS.length; i++) {
+    if (SIM0913_COLORS[i].toLowerCase() === String(color || "").trim().toLowerCase()) newColor = SIM0913_COLORS[i];
+  }
+  if (!needle) return { status: "error", error: "no athlete" };
+  if (!newColor) return { status: "error", error: "unknown color: " + color + " (valid: " + SIM0913_COLORS.join(", ") + ")" };
+
+  var ss = getOrCreateSim0913Spreadsheet();
+  var changes = [];
+
+  var sh = ss.getSheetByName("Shirts");
+  var smap = sim0913HeaderMap(sh);
+  var iAth = sim0913Col(smap, "athlete", 1), iCol = sim0913Col(smap, "logo color", 4);
+  sh.getDataRange().getValues().slice(1).forEach(function(r, i) {
+    var athlete = String(r[iAth] || "");
+    if (athlete.trim().toLowerCase().indexOf(needle) === -1) return;
+    var before = String(r[iCol] || "");
+    if (before === newColor) { changes.push({ tab: "Shirts", row: i + 2, athlete: athlete, before: before, after: newColor, noop: true }); return; }
+    sh.getRange(i + 2, iCol + 1).setValue(newColor);
+    changes.push({ tab: "Shirts", row: i + 2, athlete: athlete, before: before, after: newColor });
+  });
+
+  var sg = ss.getSheetByName("Signups");
+  var gmap = sim0913HeaderMap(sg);
+  var iShirts = sim0913Col(gmap, "shirts", 10);
+  sg.getDataRange().getValues().slice(1).forEach(function(r, i) {
+    var text = String(r[iShirts] || "");
+    if (!text) return;
+    var lines = text.split("\n");
+    var touched = false;
+    var next = lines.map(function(line) {
+      // "<name> — <garment> / <size> / <color>"
+      if (line.trim().toLowerCase().indexOf(needle) !== 0 &&
+          line.split("—")[0].trim().toLowerCase().indexOf(needle) === -1) return line;
+      var parts = line.split(" / ");
+      if (parts.length < 3) return line;
+      var before = parts[parts.length - 1];
+      if (before.trim() === newColor) return line;
+      parts[parts.length - 1] = newColor;
+      touched = true;
+      changes.push({ tab: "Signups", row: i + 2, field: "Shirts line", before: line, after: parts.join(" / ") });
+      return parts.join(" / ");
+    });
+    if (touched) sg.getRange(i + 2, iShirts + 1).setValue(next.join("\n"));
+  });
+
+  return { status: changes.length ? "ok" : "not_found", color: newColor, changes: changes };
+}
+
 // Which weight setup a category uses (per the "Heat Times" tab legend):
 // Blue 225/172/35/22/9·9ft, Green 335/227/53/44/14·10ft, Red 445/337/70/66/20·10ft.
 function sim0913WeightSetup(sex, weights) {
@@ -914,6 +1004,16 @@ function doGet(e) {
       });
     return ContentService
       .createTextOutput(JSON.stringify({ status: "ok", rows: outT }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913FindAthlete") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913FindAthlete(e.parameter.q)))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913SetColor") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913SetColor(e.parameter.athlete, e.parameter.color)))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if (action === "sim0913Health") {
