@@ -502,6 +502,36 @@ function sim0913AppendAligned(sheet, record) {
 
 var SIM0913_COLORS = ["Gold", "Hot Pink", "Lime Green", "Bright Blue", "Lavender", "Red", "Orange", "Silver", "White"];
 
+// Read-only: everyone signed up for Sept 13 — registrants (Signups) plus every
+// athlete row (Shirts). Used to avoid re-inviting people who already signed up.
+// Teammates added before the Shirts "Email" column existed have no email, so
+// names are returned too and should be matched as a fallback.
+function sim0913Roster() {
+  var ss = getOrCreateSim0913Spreadsheet();
+  var out = { status: "ok", registrants: [], athletes: [] };
+
+  var sg = ss.getSheetByName("Signups");
+  var gmap = sim0913HeaderMap(sg);
+  var iReg = sim0913Col(gmap, "registrant", 1), iEmail = sim0913Col(gmap, "email", 2);
+  sg.getDataRange().getValues().slice(1).forEach(function(r) {
+    var name = String(r[iReg] || "").trim();
+    if (!name || /test/i.test(name)) return;
+    out.registrants.push({ name: name, email: String(r[iEmail] || "").trim() });
+  });
+
+  var sh = ss.getSheetByName("Shirts");
+  var smap = sim0913HeaderMap(sh);
+  var iAth = sim0913Col(smap, "athlete", 1), iAEmail = sim0913Col(smap, "email", 8);
+  var iSReg = sim0913Col(smap, "registrant", 5);
+  sh.getDataRange().getValues().slice(1).forEach(function(r) {
+    var name = String(r[iAth] || "").trim();
+    var reg = String(r[iSReg] || "").trim();
+    if (!name || /test|canary|deleteme/i.test(name) || /test|canary|deleteme/i.test(reg)) return;
+    out.athletes.push({ name: name, email: String(r[iAEmail] || "").trim() });
+  });
+  return out;
+}
+
 // Read-only: find an athlete across both tabs (matches on the Shirts tab's
 // "Athlete" and the Signups tab's "Registrant"), returning sheet row numbers
 // and current values so a change can be reviewed before it is made.
@@ -1004,6 +1034,11 @@ function doGet(e) {
       });
     return ContentService
       .createTextOutput(JSON.stringify({ status: "ok", rows: outT }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913Roster") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913Roster()))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if (action === "sim0913FindAthlete") {
