@@ -458,16 +458,21 @@ var SIM0913_SLOTS = [
 ];
 var SIM0913_GROUP_CAPS = { "Red": 1, "Green": 3, "Blue": 3, "Scaled": 1 };
 
+// "Status" is appended LAST (added after the sheet had live data, so appending
+// keeps every existing column in place). Blank = active; "CANCELLED ..." frees
+// the heat lane and drops the shirt from the print order.
 var SIM0913_SIGNUP_HEADERS = [
   "Timestamp", "Registrant", "Email", "Division", "Sex", "Weights", "Weights Setup",
-  "Home Gym", "Heat", "Athletes", "Shirts", "Payment Method", "Total Due", "Paid?", "Comments"
+  "Home Gym", "Heat", "Athletes", "Shirts", "Payment Method", "Total Due", "Paid?", "Comments", "Status"
 ];
 // NOTE: "Email" is appended LAST on purpose — it was added after the sheet
 // had real data, and appending keeps every existing column in place. Rows
 // are written by header name, so the column can be dragged anywhere.
 var SIM0913_SHIRT_HEADERS = [
-  "Timestamp", "Athlete", "Garment", "Size", "Logo Color", "Registrant", "Division", "Payment Method", "Email"
+  "Timestamp", "Athlete", "Garment", "Size", "Logo Color", "Registrant", "Division", "Payment Method", "Email", "Status"
 ];
+
+var SIM0913_CANCELLED_RE = /^\s*cancel/i;
 
 // Header-aligned sheet IO: rows are written/read by matching the header
 // text in row 1, so Kevin can reorder/resize columns freely. Don't RENAME
@@ -513,9 +518,11 @@ function sim0913Roster() {
   var sg = ss.getSheetByName("Signups");
   var gmap = sim0913HeaderMap(sg);
   var iReg = sim0913Col(gmap, "registrant", 1), iEmail = sim0913Col(gmap, "email", 2);
+  var iGStatus = sim0913Col(gmap, "status", -1);
   sg.getDataRange().getValues().slice(1).forEach(function(r) {
     var name = String(r[iReg] || "").trim();
     if (!name || /test/i.test(name)) return;
+    if (iGStatus >= 0 && SIM0913_CANCELLED_RE.test(String(r[iGStatus] || ""))) return;
     out.registrants.push({ name: name, email: String(r[iEmail] || "").trim() });
   });
 
@@ -523,13 +530,63 @@ function sim0913Roster() {
   var smap = sim0913HeaderMap(sh);
   var iAth = sim0913Col(smap, "athlete", 1), iAEmail = sim0913Col(smap, "email", 8);
   var iSReg = sim0913Col(smap, "registrant", 5);
+  var iSStatus = sim0913Col(smap, "status", -1);
   sh.getDataRange().getValues().slice(1).forEach(function(r) {
     var name = String(r[iAth] || "").trim();
     var reg = String(r[iSReg] || "").trim();
     if (!name || /test|canary|deleteme/i.test(name) || /test|canary|deleteme/i.test(reg)) return;
+    if (iSStatus >= 0 && SIM0913_CANCELLED_RE.test(String(r[iSStatus] || ""))) return;
     out.athletes.push({ name: name, email: String(r[iAEmail] || "").trim() });
   });
   return out;
+}
+
+// Cancel a registration WITHOUT deleting it: stamps Status="CANCELLED <date>"
+// on the Signups row and on every Shirts row for that registration. The lane is
+// immediately released back to the heat picker and the shirts drop off the
+// print order, but the payment trail (Payment Method / Paid?) survives so a
+// refund can be tracked. Reversible — clear the Status cells to restore.
+function sim0913Cancel(q, note) {
+  var needle = String(q || "").trim().toLowerCase();
+  if (!needle) return { status: "error", error: "no registrant" };
+  var ss = getOrCreateSim0913Spreadsheet();
+  var stamp = "CANCELLED " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd") +
+              (note ? " — " + note : "");
+  var changed = { status: "ok", stamp: stamp, signups: [], shirts: [], freedLane: null };
+
+  var sg = ss.getSheetByName("Signups");
+  var gmap = sim0913HeaderMap(sg);
+  var iReg = sim0913Col(gmap, "registrant", 1), iStatus = sim0913Col(gmap, "status", -1);
+  var iHeat = sim0913Col(gmap, "heat", 8), iSetup = sim0913Col(gmap, "weights setup", 6);
+  if (iStatus < 0) return { status: "error", error: "Signups tab has no Status column — run ?action=sim0913FixHeaders first" };
+  sg.getDataRange().getValues().slice(1).forEach(function(r, i) {
+    var reg = String(r[iReg] || "");
+    if (reg.trim().toLowerCase().indexOf(needle) === -1) return;
+    if (SIM0913_CANCELLED_RE.test(String(r[iStatus] || ""))) {
+      changed.signups.push({ row: i + 2, registrant: reg, alreadyCancelled: true });
+      return;
+    }
+    sg.getRange(i + 2, iStatus + 1).setValue(stamp);
+    changed.signups.push({ row: i + 2, registrant: reg, heat: sim0913NormalizeHeat(r[iHeat]) });
+    changed.freedLane = { heat: sim0913NormalizeHeat(r[iHeat]), group: String(r[iSetup] || "").split(" ")[0] };
+  });
+
+  var sh = ss.getSheetByName("Shirts");
+  var smap = sim0913HeaderMap(sh);
+  var iAth = sim0913Col(smap, "athlete", 1), iSReg = sim0913Col(smap, "registrant", 5);
+  var iSStatus = sim0913Col(smap, "status", -1);
+  if (iSStatus < 0) return { status: "error", error: "Shirts tab has no Status column — run ?action=sim0913FixHeaders first" };
+  sh.getDataRange().getValues().slice(1).forEach(function(r, i) {
+    var reg = String(r[iSReg] || ""), ath = String(r[iAth] || "");
+    // cancel the whole registration: every shirt row filed under that registrant
+    if (reg.trim().toLowerCase().indexOf(needle) === -1) return;
+    if (SIM0913_CANCELLED_RE.test(String(r[iSStatus] || ""))) return;
+    sh.getRange(i + 2, iSStatus + 1).setValue(stamp);
+    changed.shirts.push({ row: i + 2, athlete: ath });
+  });
+
+  if (!changed.signups.length && !changed.shirts.length) changed.status = "not_found";
+  return changed;
 }
 
 // Read-only: find an athlete across both tabs (matches on the Shirts tab's
@@ -655,11 +712,13 @@ function sim0913SlotCounts() {
   var iReg = sim0913Col(map, "registrant", 1);
   var iSetup = sim0913Col(map, "weights setup", 6);
   var iHeat = sim0913Col(map, "heat", 8);
+  var iStatus = sim0913Col(map, "status", -1);
   rows.forEach(function(r) {
     var registrant = String(r[iReg] || "");
     var heat = sim0913NormalizeHeat(r[iHeat]);
     var g = String(r[iSetup] || "").split(" ")[0]; // "Red"/"Green"/"Blue"/"Scaled"
     if (/test/i.test(registrant)) return;
+    if (iStatus >= 0 && SIM0913_CANCELLED_RE.test(String(r[iStatus] || ""))) return; // lane is free again
     if (counts.hasOwnProperty(heat) && counts[heat].hasOwnProperty(g)) {
       counts[heat][g]++;
     }
@@ -910,12 +969,14 @@ function sim0913ShirtTally() {
   var iAth = sim0913Col(map, "athlete", 1), iGar = sim0913Col(map, "garment", 2),
       iSize = sim0913Col(map, "size", 3), iCol = sim0913Col(map, "logo color", 4),
       iReg = sim0913Col(map, "registrant", 5);
+  var iStatus = sim0913Col(map, "status", -1);
   var counts = {}; // garment|color|size -> n
   var totalShirts = 0;
   rows.forEach(function(r) {
     var athlete = String(r[iAth] || ""), garment = String(r[iGar] || ""), size = String(r[iSize] || ""), color = String(r[iCol] || "");
     var reg = String(r[iReg] || "");
     if (/test/i.test(athlete) || /test/i.test(reg)) return; // skip test rows
+    if (iStatus >= 0 && SIM0913_CANCELLED_RE.test(String(r[iStatus] || ""))) return; // don't print cancelled shirts
     if (!garment) return;
     var k = garment + "|" + color + "|" + size;
     counts[k] = (counts[k] || 0) + 1;
@@ -1034,6 +1095,11 @@ function doGet(e) {
       });
     return ContentService
       .createTextOutput(JSON.stringify({ status: "ok", rows: outT }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913Cancel") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913Cancel(e.parameter.registrant, e.parameter.note)))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if (action === "sim0913Roster") {
