@@ -160,3 +160,21 @@ It posts to the same web app with `type: "classtimes"` and lands in its **own** 
 |---|---|
 | Name | **required** |
 | Preferred class times | checkbox grid (Mon–Fri × the 8 times), at least one required |
+
+### Known failure mode (fixed 2026-08-18)
+
+A signup POST to Apps Script is answered with a **302 redirect** to
+`script.googleusercontent.com`; the browser then GETs that URL for the body. If
+that hop degrades into a plain GET of `/exec` (observed on mobile Safari, and
+possible via proxies/blockers), the old code returned the health check's
+`{"status":"ok"}` — byte-identical to a successful save — so the athlete saw
+"YOU'RE IN!" while **nothing was written**. One athlete (Amanda Butler, 8/18)
+was lost this way before it was caught.
+
+Now: `doPost` returns `{status:"ok", saved:true, row:N}`, the health check
+returns `status:"service_ok"` and never `"ok"`, and the client only shows the
+success screen when `resp.saved === true`. **Don't reintroduce a bare
+`{status:"ok"}` from `doGet`.**
+
+The inverse also exists: the row can be written and the *response* still fail,
+so an athlete sees an error and may resubmit. Watch for duplicate registrants.
