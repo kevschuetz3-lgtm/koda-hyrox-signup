@@ -507,6 +507,38 @@ function sim0913AppendAligned(sheet, record) {
 
 var SIM0913_COLORS = ["Gold", "Hot Pink", "Lime Green", "Bright Blue", "Lavender", "Red", "Orange", "Silver", "White"];
 
+
+// DIAGNOSTIC (read-only): raw tail of the Signups tab + every Drive file whose
+// name looks like this event's spreadsheet, to catch (a) rows written blank or
+// into the wrong columns and (b) a duplicate spreadsheet created by the
+// get-or-create fallback.
+function sim0913Diag(n) {
+  var ss = getOrCreateSim0913Spreadsheet();
+  var sg = ss.getSheetByName("Signups");
+  var last = sg.getLastRow();
+  var take = Math.min(parseInt(n || "8", 10), 40);
+  var startRow = Math.max(2, last - take + 1);
+  var width = sg.getLastColumn();
+  var headers = sg.getRange(1, 1, 1, width).getValues()[0].map(function(h) { return String(h); });
+  var rows = [];
+  if (last >= 2) {
+    sg.getRange(startRow, 1, last - startRow + 1, width).getValues().forEach(function(r, i) {
+      var obj = { row: startRow + i, blank: r.every(function(v) { return String(v).trim() === ""; }) };
+      headers.forEach(function(h, ci) { if (h) obj[h] = String(r[ci]); });
+      rows.push(obj);
+    });
+  }
+  var files = [];
+  try {
+    var it = DriveApp.getFilesByName("Koda Hyrox Simulation Signups — Sept 13 2026");
+    while (it.hasNext()) {
+      var fl = it.next();
+      files.push({ id: fl.getId(), name: fl.getName(), created: String(fl.getDateCreated()), updated: String(fl.getLastUpdated()), isCurrent: fl.getId() === ss.getId() });
+    }
+  } catch (e) { files.push({ error: String(e) }); }
+  return { status: "ok", sheetId: ss.getId(), url: ss.getUrl(), headers: headers, lastRow: last, rows: rows, driveMatches: files };
+}
+
 // Read-only: everyone signed up for Sept 13 — registrants (Signups) plus every
 // athlete row (Shirts). Used to avoid re-inviting people who already signed up.
 // Teammates added before the Shirts "Email" column existed have no email, so
@@ -816,6 +848,7 @@ function handleSim0913(data) {
       .createTextOutput(JSON.stringify({ status: "error", error: "Invalid category/weights combination." }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+  var savedRow = 0;
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -826,6 +859,7 @@ function handleSim0913(data) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    savedRow = signups.getLastRow() + 1;
     sim0913AppendAligned(signups, {
       "timestamp": now,
       "registrant": registrant,
@@ -950,7 +984,7 @@ function handleSim0913(data) {
   }
 
   return ContentService
-    .createTextOutput(JSON.stringify({ status: "ok" }))
+    .createTextOutput(JSON.stringify({ status: "ok", saved: true, row: savedRow }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -1102,6 +1136,11 @@ function doGet(e) {
       .createTextOutput(JSON.stringify(sim0913Cancel(e.parameter.registrant, e.parameter.note)))
       .setMimeType(ContentService.MimeType.JSON);
   }
+  if (action === "sim0913Diag") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913Diag(e.parameter.n)))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   if (action === "sim0913Roster") {
     return ContentService
       .createTextOutput(JSON.stringify(sim0913Roster()))
@@ -1134,6 +1173,6 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
   return ContentService
-    .createTextOutput(JSON.stringify({ status: "ok", message: "Hyrox Simulation signup API running" }))
+    .createTextOutput(JSON.stringify({ status: "service_ok", saved: false, message: "Hyrox Simulation signup API running" }))
     .setMimeType(ContentService.MimeType.JSON);
 }

@@ -2109,7 +2109,10 @@
         .then(function(r) { return r.json(); })
         .then(function(resp) {
           loadingOverlay.classList.remove('active');
-          if (resp.status === 'ok') {
+          // Require the explicit saved marker. A bare {status:"ok"} is what the
+          // health check returns, so a POST that gets turned into a GET (302
+          // redirect, some mobile browsers) would otherwise read as a signup.
+          if (resp.status === 'ok' && resp.saved === true) {
             showSuccess(data);
           } else if (resp.status === 'slot_full') {
             submitBtn.disabled = false;
@@ -2119,7 +2122,7 @@
             showError('The ' + data.heat + ' AM heat just ran out of lanes for your division — please pick another time.', 'heat');
             document.getElementById('slotGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
           } else {
-            throw new Error(resp.error || 'Unknown error');
+            throw new Error(resp.error || "your signup didn't save — please try again");
           }
         })
         .catch(function(err) {
