@@ -502,7 +502,8 @@ function sim0913AppendAligned(sheet, record) {
     var idx = map[key];
     if (idx !== undefined && idx < width) row[idx] = record[key];
   }
-  sheet.appendRow(row);
+  var target = sim0913NextRow(sheet, "timestamp");
+  sheet.getRange(target, 1, 1, row.length).setValues([row]);
 }
 
 var SIM0913_COLORS = ["Gold", "Hot Pink", "Lime Green", "Bright Blue", "Lavender", "Red", "Orange", "Silver", "White"];
@@ -537,6 +538,183 @@ function sim0913Diag(n) {
     }
   } catch (e) { files.push({ error: String(e) }); }
   return { status: "ok", sheetId: ss.getId(), url: ss.getUrl(), headers: headers, lastRow: last, rows: rows, driveMatches: files };
+}
+
+// AUDIT (read-only): every integrity problem we can detect from the sheet.
+// Missing rows from the old false-success bug leave NO trace, but their
+// side effects (duplicates, orphans, over-capacity, stray rows) do.
+function sim0913Audit() {
+  var ss = getOrCreateSim0913Spreadsheet();
+  var sg = ss.getSheetByName("Signups"), sh = ss.getSheetByName("Shirts");
+  var gm = sim0913HeaderMap(sg), sm = sim0913HeaderMap(sh);
+  var G = {
+    reg: sim0913Col(gm,"registrant",1), email: sim0913Col(gm,"email",2), div: sim0913Col(gm,"division",3),
+    sex: sim0913Col(gm,"sex",4), wts: sim0913Col(gm,"weights",5), setup: sim0913Col(gm,"weights setup",6),
+    heat: sim0913Col(gm,"heat",8), n: sim0913Col(gm,"athletes",9), status: sim0913Col(gm,"status",-1),
+    ts: sim0913Col(gm,"timestamp",0)
+  };
+  var S = {
+    ath: sim0913Col(sm,"athlete",1), gar: sim0913Col(sm,"garment",2), size: sim0913Col(sm,"size",3),
+    col: sim0913Col(sm,"logo color",4), reg: sim0913Col(sm,"registrant",5), status: sim0913Col(sm,"status",-1)
+  };
+  var issues = [];
+  var add = function(sev,type,msg,where){ issues.push({severity:sev,type:type,detail:msg,where:where}); };
+
+  var gRows = sg.getDataRange().getValues().slice(1);
+  var sRows = sh.getDataRange().getValues().slice(1);
+  var isCancelled = function(v){ return SIM0913_CANCELLED_RE.test(String(v||"")); };
+  var isTest = function(v){ return /test|canary|deleteme/i.test(String(v||"")); };
+
+  // ---- Signups integrity ----
+  var byName = {}, byEmail = {}, active = 0, capUse = {};
+  gRows.forEach(function(r,i){
+    var row=i+2, reg=String(r[G.reg]||"").trim();
+    var blank = r.every(function(v){return String(v).trim()==="";});
+    if (blank) { add("warn","blank-row","Signups row is entirely empty",row); return; }
+    if (isTest(reg)) return;
+    if (G.status>=0 && isCancelled(r[G.status])) return;
+    active++;
+    if (!reg) add("error","missing-name","Signups row has no registrant name",row);
+    var em=String(r[G.email]||"").trim();
+    if (!em) add("error","missing-email","No email — this athlete cannot be contacted: "+reg,row);
+    else { var ek=em.toLowerCase(); (byEmail[ek]=byEmail[ek]||[]).push(row); }
+    if (reg) { var nk=reg.toLowerCase(); (byName[nk]=byName[nk]||[]).push(row); }
+    var heat = sim0913NormalizeHeat(r[G.heat]);
+    if (SIM0913_SLOTS.indexOf(heat)===-1) add("error","bad-heat","Heat \""+heat+"\" is not a valid slot: "+reg,row);
+    var grp = String(r[G.setup]||"").split(" ")[0];
+    if (!SIM0913_GROUP_CAPS[grp]) add("error","bad-group","No/unknown weight setup ("+grp+"): "+reg,row);
+    else { var k=heat+"|"+grp; (capUse[k]=capUse[k]||[]).push(reg); }
+    // athlete count vs shirt rows
+    var declared = parseInt(r[G.n],10);
+    if (!isNaN(declared)) {
+      var actual=0;
+      sRows.forEach(function(sr){ if(String(sr[S.reg]||"").trim().toLowerCase()===reg.toLowerCase() && !(S.status>=0 && isCancelled(sr[S.status]))) actual++; });
+      if (actual!==declared) add("error","shirt-count","Says "+declared+" athlete(s) but has "+actual+" shirt row(s): "+reg,row);
+    }
+  });
+  Object.keys(byName).forEach(function(k){ if(byName[k].length>1) add("warn","duplicate-name","Same registrant on rows "+byName[k].join(", ")+" — possible double submit",byName[k][0]); });
+  Object.keys(byEmail).forEach(function(k){ if(byEmail[k].length>1) add("warn","duplicate-email","Same email ("+k+") on rows "+byEmail[k].join(", "),byEmail[k][0]); });
+  Object.keys(capUse).forEach(function(k){
+    var p=k.split("|"), cap=SIM0913_GROUP_CAPS[p[1]];
+    if (capUse[k].length>cap) add("error","over-capacity",p[0]+" "+p[1]+" lanes: "+capUse[k].length+" booked but only "+cap+" exist ("+capUse[k].join(", ")+")",0);
+  });
+
+  // ---- Shirts integrity ----
+  var regSet = {};
+  gRows.forEach(function(r){ var k=String(r[G.reg]||"").trim().toLowerCase(); if(k) regSet[k]=true; });
+  var VALID_SIZES = {"XS":1,"S":1,"M":1,"L":1,"XL":1,"2XL":1,"3XL":1};
+  var shirtCount=0, maxRow=1;
+  sRows.forEach(function(r,i){
+    var row=i+2;
+    var blank = r.every(function(v){return String(v).trim()==="";});
+    if (blank) return;
+    maxRow=row;
+    var ath=String(r[S.ath]||"").trim(), reg=String(r[S.reg]||"").trim();
+    if (isTest(ath)||isTest(reg)) { add("info","test-row","Leftover test row: "+(ath||reg),row); return; }
+    if (S.status>=0 && isCancelled(r[S.status])) return;
+    shirtCount++;
+    if (!regSet[reg.toLowerCase()]) add("error","orphan-shirt","Shirt row has no matching registration ("+reg+" / "+ath+")",row);
+    var sz=String(r[S.size]||"").trim();
+    if (!VALID_SIZES[sz]) add("error","bad-size","Unrecognised size \""+sz+"\": "+ath,row);
+    var co=String(r[S.col]||"").trim();
+    if (SIM0913_COLORS.indexOf(co)===-1) add("error","bad-color","Unrecognised logo color \""+co+"\": "+ath,row);
+    var ga=String(r[S.gar]||"").trim();
+    if (ga!=="Unisex Tee" && ga!=="Cropped Tee") add("error","bad-garment","Unrecognised garment \""+ga+"\": "+ath,row);
+  });
+  if (sh.getLastRow() > maxRow + 1) add("warn","stray-content","Shirts tab reports "+sh.getLastRow()+" rows but the last real data is row "+maxRow+" — stray content/formatting below pushes new rows down",maxRow+1);
+
+  return { status:"ok", activeRegistrations:active, activeShirts:shirtCount,
+           signupsLastRow:sg.getLastRow(), shirtsLastRow:sh.getLastRow(),
+           issueCount:issues.length, issues:issues };
+}
+
+// Lane map: for every heat, who occupies each lane type. Powers the visual
+// heat/lane chart. Cancelled and test rows are excluded.
+function sim0913Grid() {
+  var ss = getOrCreateSim0913Spreadsheet();
+  var sg = ss.getSheetByName("Signups");
+  var m = sim0913HeaderMap(sg);
+  var C = { reg: sim0913Col(m,"registrant",1), div: sim0913Col(m,"division",3), sex: sim0913Col(m,"sex",4),
+            wts: sim0913Col(m,"weights",5), setup: sim0913Col(m,"weights setup",6), heat: sim0913Col(m,"heat",8),
+            n: sim0913Col(m,"athletes",9), status: sim0913Col(m,"status",-1), paid: sim0913Col(m,"paid?",13) };
+  var grid = {};
+  SIM0913_SLOTS.forEach(function(t){ grid[t] = { Red:[], Green:[], Blue:[], Scaled:[] }; });
+  var totalAthletes = 0, totalCrews = 0;
+  sg.getDataRange().getValues().slice(1).forEach(function(r){
+    var reg = String(r[C.reg]||"").trim();
+    if (!reg || /test|canary|deleteme/i.test(reg)) return;
+    if (C.status>=0 && SIM0913_CANCELLED_RE.test(String(r[C.status]||""))) return;
+    var heat = sim0913NormalizeHeat(r[C.heat]);
+    var grp = String(r[C.setup]||"").split(" ")[0];
+    if (!grid[heat] || !grid[heat][grp]) return;
+    var n = parseInt(r[C.n],10); if (isNaN(n)) n = 1;
+    grid[heat][grp].push({ name: reg, division: String(r[C.div]||""), sex: String(r[C.sex]||""),
+                           weights: String(r[C.wts]||""), athletes: n,
+                           paid: String(r[C.paid]||"").trim() !== "" });
+    totalAthletes += n; totalCrews++;
+  });
+  return { status:"ok", slots: SIM0913_SLOTS, caps: SIM0913_GROUP_CAPS, grid: grid,
+           totalCrews: totalCrews, totalAthletes: totalAthletes };
+}
+
+// The row a new record should occupy: one past the last row that actually has
+// data in its key column. appendRow() targets one past the last row with ANY
+// content, so a single stray cell far below the data silently pushes every new
+// row hundreds of rows down (this happened on the Shirts tab, row 1001).
+function sim0913NextRow(sheet, keyName) {
+  var map = sim0913HeaderMap(sheet);
+  var idx = sim0913Col(map, keyName, 0);
+  var last = sheet.getLastRow();
+  if (last < 2) return 2;
+  var col = sheet.getRange(2, idx + 1, last - 1, 1).getValues();
+  for (var i = col.length - 1; i >= 0; i--) {
+    if (String(col[i][0]).trim() !== "") return i + 3;
+  }
+  return 2;
+}
+
+// Read-only: where the real data actually sits on the Shirts tab.
+function sim0913ShirtsLayout() {
+  var ss = getOrCreateSim0913Spreadsheet();
+  var sh = ss.getSheetByName("Shirts");
+  var last = sh.getLastRow(), width = sh.getLastColumn();
+  var vals = last >= 2 ? sh.getRange(2, 1, last - 1, width).getValues() : [];
+  var map = sim0913HeaderMap(sh);
+  var iAth = sim0913Col(map, "athlete", 1);
+  var runs = [], cur = null, realRows = 0;
+  vals.forEach(function(r, i) {
+    var row = i + 2;
+    var any = r.some(function(v){ return String(v).trim() !== ""; });
+    var real = String(r[iAth]||"").trim() !== "";
+    if (real) realRows++;
+    if (any) { if (!cur) { cur = { from: row, to: row, real: 0 }; runs.push(cur); } cur.to = row; if (real) cur.real++; }
+    else cur = null;
+  });
+  return { status:"ok", lastRow:last, maxRows:sh.getMaxRows(), realRows:realRows,
+           nextAppendRow: sim0913NextRow(sh, "timestamp"), runs: runs };
+}
+
+// Pull stray rows back up so the tab reads as one contiguous block, then clear
+// whatever junk sat below. Content-only: no rows are deleted.
+function sim0913CompactShirts() {
+  var ss = getOrCreateSim0913Spreadsheet();
+  var sh = ss.getSheetByName("Shirts");
+  var last = sh.getLastRow(), width = sh.getLastColumn();
+  if (last < 2) return { status:"ok", moved:0 };
+  var map = sim0913HeaderMap(sh);
+  var iAth = sim0913Col(map, "athlete", 1);
+  var vals = sh.getRange(2, 1, last - 1, width).getValues();
+  var keep = [], discarded = 0;
+  vals.forEach(function(r) {
+    if (String(r[iAth]||"").trim() !== "") keep.push(r);
+    else if (r.some(function(v){ return String(v).trim() !== ""; })) discarded++;
+  });
+  sh.getRange(2, 1, last - 1, width).clearContent();
+  if (keep.length) sh.getRange(2, 1, keep.length, width).setValues(keep);
+  SpreadsheetApp.flush();
+  return { status:"ok", rowsKept: keep.length, junkRowsCleared: discarded,
+           lastRowBefore: last, lastRowAfter: sh.getLastRow(),
+           nextAppendRow: sim0913NextRow(sh, "timestamp") };
 }
 
 // Read-only: everyone signed up for Sept 13 — registrants (Signups) plus every
@@ -1139,6 +1317,26 @@ function doGet(e) {
   if (action === "sim0913Diag") {
     return ContentService
       .createTextOutput(JSON.stringify(sim0913Diag(e.parameter.n)))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913Audit") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913Audit()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913Grid") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913Grid()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913ShirtsLayout") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913ShirtsLayout()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913CompactShirts") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913CompactShirts()))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if (action === "sim0913Roster") {
