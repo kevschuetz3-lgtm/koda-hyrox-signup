@@ -799,6 +799,77 @@ function sim0913Cancel(q, note) {
   return changed;
 }
 
+// Change one athlete's garment and/or size, keeping the Shirts row and the
+// Signups "Shirts" summary line in lockstep (same contract as sim0913SetColor).
+// Size is validated against the target garment's size range.
+var SIM0913_GARMENT_SIZES = {
+  "Unisex Tee":  ["XS","S","M","L","XL","2XL","3XL"],
+  "Cropped Tee": ["S","M","L","XL","2XL"]
+};
+
+function sim0913SetShirt(q, garment, size) {
+  var needle = String(q || "").trim().toLowerCase();
+  if (!needle) return { status: "error", error: "no athlete" };
+
+  var gIn = String(garment || "").trim().toLowerCase();
+  var newGarment = null;
+  if (gIn === "unisex tee" || gIn === "tee" || gIn === "unisex") newGarment = "Unisex Tee";
+  if (gIn === "cropped tee" || gIn === "crop" || gIn === "cropped") newGarment = "Cropped Tee";
+  if (garment && !newGarment) return { status: "error", error: "unknown garment: " + garment };
+
+  var newSize = String(size || "").trim().toUpperCase() || null;
+
+  var ss = getOrCreateSim0913Spreadsheet();
+  var changes = [];
+
+  var sh = ss.getSheetByName("Shirts");
+  var smap = sim0913HeaderMap(sh);
+  var iAth = sim0913Col(smap, "athlete", 1), iGar = sim0913Col(smap, "garment", 2), iSize = sim0913Col(smap, "size", 3);
+  var iStatus = sim0913Col(smap, "status", -1);
+  var targetGarment = null, targetSize = null;
+  sh.getDataRange().getValues().slice(1).forEach(function(r, i) {
+    var athlete = String(r[iAth] || "");
+    if (athlete.trim().toLowerCase().indexOf(needle) === -1) return;
+    if (iStatus >= 0 && SIM0913_CANCELLED_RE.test(String(r[iStatus] || ""))) return;
+    var curGarment = String(r[iGar] || ""), curSize = String(r[iSize] || "");
+    targetGarment = newGarment || curGarment;
+    targetSize = newSize || curSize;
+    var sizes = SIM0913_GARMENT_SIZES[targetGarment] || [];
+    if (sizes.indexOf(targetSize) === -1) {
+      changes.push({ tab: "Shirts", row: i + 2, athlete: athlete, error: "size " + targetSize + " not available for " + targetGarment + " (" + sizes.join("/") + ")" });
+      return;
+    }
+    if (curGarment !== targetGarment) { sh.getRange(i + 2, iGar + 1).setValue(targetGarment); changes.push({ tab: "Shirts", row: i + 2, athlete: athlete, field: "Garment", before: curGarment, after: targetGarment }); }
+    if (curSize !== targetSize) { sh.getRange(i + 2, iSize + 1).setValue(targetSize); changes.push({ tab: "Shirts", row: i + 2, athlete: athlete, field: "Size", before: curSize, after: targetSize }); }
+    if (curGarment === targetGarment && curSize === targetSize) changes.push({ tab: "Shirts", row: i + 2, athlete: athlete, noop: true });
+  });
+
+  if (targetGarment) {
+    var sg = ss.getSheetByName("Signups");
+    var gmap = sim0913HeaderMap(sg);
+    var iShirts = sim0913Col(gmap, "shirts", 10);
+    sg.getDataRange().getValues().slice(1).forEach(function(r, i) {
+      var text = String(r[iShirts] || "");
+      if (!text) return;
+      var touched = false;
+      var next = text.split(String.fromCharCode(10)).map(function(line) {
+        var sep = line.indexOf(" — ");
+        if (sep === -1) return line;
+        var name = line.slice(0, sep);
+        if (name.trim().toLowerCase().indexOf(needle) === -1) return line;
+        var parts = line.slice(sep + 3).split(" / ");
+        if (parts.length < 3) return line;
+        var rebuilt = name + " — " + targetGarment + " / " + targetSize + " / " + parts.slice(2).join(" / ");
+        if (rebuilt !== line) { touched = true; changes.push({ tab: "Signups", row: i + 2, field: "Shirts line", before: line, after: rebuilt }); }
+        return rebuilt;
+      }).join(String.fromCharCode(10));
+      if (touched) sg.getRange(i + 2, iShirts + 1).setValue(next);
+    });
+  }
+
+  return { status: changes.length ? "ok" : "not_found", changes: changes };
+}
+
 // Read-only: find an athlete across both tabs (matches on the Shirts tab's
 // "Athlete" and the Signups tab's "Registrant"), returning sheet row numbers
 // and current values so a change can be reviewed before it is made.
@@ -1347,6 +1418,11 @@ function doGet(e) {
   if (action === "sim0913FindAthlete") {
     return ContentService
       .createTextOutput(JSON.stringify(sim0913FindAthlete(e.parameter.q)))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913SetShirt") {
+    return ContentService
+      .createTextOutput(JSON.stringify(sim0913SetShirt(e.parameter.athlete, e.parameter.garment, e.parameter.size)))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if (action === "sim0913SetColor") {
