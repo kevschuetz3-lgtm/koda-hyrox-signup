@@ -458,6 +458,42 @@ var SIM0913_SLOTS = [
 ];
 var SIM0913_GROUP_CAPS = { "Red": 1, "Green": 3, "Blue": 3, "Scaled": 1 };
 
+// ── 12:00 auto-heat (Kevin 9/6): once every Women's Open (Blue) lane in the
+// base 9:00–11:50 heats is taken, publish one extra noon heat with the
+// standard 1/3/3/1 lane split. Latched via script property so the heat stays
+// open even if a morning Blue lane frees up afterward — athletes may already
+// hold noon lanes by then.
+var SIM0913_NOON_SLOT = "12:00";
+var SIM0913_NOON_PROP = "SIM0913_NOON_OPEN";
+
+function sim0913NoonOpen(allCounts) {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty(SIM0913_NOON_PROP) === "1") return true;
+  var counts = allCounts || sim0913CountsAllHeats();
+  var blueUsed = 0;
+  SIM0913_SLOTS.forEach(function(s) { blueUsed += ((counts[s] || {}).Blue) || 0; });
+  if (blueUsed < SIM0913_SLOTS.length * SIM0913_GROUP_CAPS.Blue) return false;
+  props.setProperty(SIM0913_NOON_PROP, "1");
+  if (NOTIFY_EMAIL) {
+    try {
+      MailApp.sendEmail({
+        to: NOTIFY_EMAIL,
+        subject: "Hyrox Sim 9/13 — 12:00 noon heat auto-opened",
+        htmlBody: "Every Women's Open (Blue) lane from 9:00–11:50 is now taken, so the signup site just published the extra <strong>12:00 noon</strong> heat (standard 1 Red / 3 Green / 3 Blue / 1 Scaled lanes). This is the auto-open requested on 9/6 — no action needed."
+      });
+    } catch (e) { /* the latch must not fail on a mail error */ }
+  }
+  return true;
+}
+
+function sim0913EffectiveSlots(allCounts) {
+  return sim0913NoonOpen(allCounts) ? SIM0913_SLOTS.concat([SIM0913_NOON_SLOT]) : SIM0913_SLOTS.slice();
+}
+
+function sim0913HeatLabel(slot) {
+  return slot === SIM0913_NOON_SLOT ? slot + " noon" : slot + " AM";
+}
+
 // "Status" is appended LAST (added after the sheet had live data, so appending
 // keeps every existing column in place). Blank = active; "CANCELLED ..." frees
 // the heat lane and drops the shirt from the print order.
@@ -580,7 +616,8 @@ function sim0913Audit() {
     else { var ek=em.toLowerCase(); (byEmail[ek]=byEmail[ek]||[]).push(row); }
     if (reg) { var nk=reg.toLowerCase(); (byName[nk]=byName[nk]||[]).push(row); }
     var heat = sim0913NormalizeHeat(r[G.heat]);
-    if (SIM0913_SLOTS.indexOf(heat)===-1) add("error","bad-heat","Heat \""+heat+"\" is not a valid slot: "+reg,row);
+    if (SIM0913_SLOTS.indexOf(heat)===-1 &&
+        !(heat===SIM0913_NOON_SLOT && sim0913NoonOpen())) add("error","bad-heat","Heat \""+heat+"\" is not a valid slot: "+reg,row);
     var grp = String(r[G.setup]||"").split(" ")[0];
     if (!SIM0913_GROUP_CAPS[grp]) add("error","bad-group","No/unknown weight setup ("+grp+"): "+reg,row);
     else { var k=heat+"|"+grp; (capUse[k]=capUse[k]||[]).push(reg); }
@@ -638,7 +675,8 @@ function sim0913Grid() {
             wts: sim0913Col(m,"weights",5), setup: sim0913Col(m,"weights setup",6), heat: sim0913Col(m,"heat",8),
             n: sim0913Col(m,"athletes",9), status: sim0913Col(m,"status",-1), paid: sim0913Col(m,"paid?",13) };
   var grid = {};
-  SIM0913_SLOTS.forEach(function(t){ grid[t] = { Red:[], Green:[], Blue:[], Scaled:[] }; });
+  var gridSlots = sim0913EffectiveSlots();
+  gridSlots.forEach(function(t){ grid[t] = { Red:[], Green:[], Blue:[], Scaled:[] }; });
   var totalAthletes = 0, totalCrews = 0;
   sg.getDataRange().getValues().slice(1).forEach(function(r){
     var reg = String(r[C.reg]||"").trim();
@@ -653,7 +691,7 @@ function sim0913Grid() {
                            paid: String(r[C.paid]||"").trim() !== "" });
     totalAthletes += n; totalCrews++;
   });
-  return { status:"ok", slots: SIM0913_SLOTS, caps: SIM0913_GROUP_CAPS, grid: grid,
+  return { status:"ok", slots: gridSlots, caps: SIM0913_GROUP_CAPS, grid: grid,
            totalCrews: totalCrews, totalAthletes: totalAthletes };
 }
 
@@ -981,7 +1019,10 @@ function sim0913NormalizeHeat(v) {
   return String(v || "").trim();
 }
 
-function sim0913SlotCounts() {
+// One pass over Signups: a bucket for every base slot (zeros included) plus
+// any other heat that appears in the data (e.g. "12:00" once the noon heat
+// exists). Callers decide which heats to expose.
+function sim0913CountsAllHeats() {
   var ss = getOrCreateSim0913Spreadsheet();
   var sheet = ss.getSheetByName("Signups");
   var rows = sheet.getDataRange().getValues().slice(1);
@@ -998,11 +1039,21 @@ function sim0913SlotCounts() {
     var registrant = String(r[iReg] || "");
     var heat = sim0913NormalizeHeat(r[iHeat]);
     var g = String(r[iSetup] || "").split(" ")[0]; // "Red"/"Green"/"Blue"/"Scaled"
-    if (/test/i.test(registrant)) return;
+    if (!heat || /test/i.test(registrant)) return;
     if (iStatus >= 0 && SIM0913_CANCELLED_RE.test(String(r[iStatus] || ""))) return; // lane is free again
-    if (counts.hasOwnProperty(heat) && counts[heat].hasOwnProperty(g)) {
-      counts[heat][g]++;
-    }
+    if (!SIM0913_GROUP_CAPS.hasOwnProperty(g)) return;
+    if (!counts.hasOwnProperty(heat)) counts[heat] = { "Red": 0, "Green": 0, "Blue": 0, "Scaled": 0 };
+    counts[heat][g]++;
+  });
+  return counts;
+}
+
+function sim0913SlotCounts() {
+  var all = sim0913CountsAllHeats();
+  var slots = sim0913EffectiveSlots(all);
+  var counts = {};
+  slots.forEach(function(s) {
+    counts[s] = all[s] || { "Red": 0, "Green": 0, "Blue": 0, "Scaled": 0 };
   });
   return { status: "ok", caps: SIM0913_GROUP_CAPS, counts: counts };
 }
@@ -1085,7 +1136,8 @@ function handleSim0913(data) {
   // Heat slot: validate + enforce the per-lane-type cap under a lock so
   // two simultaneous signups can't both grab the last lane of a type.
   var slot = String(data.heat || "").trim();
-  if (SIM0913_SLOTS.indexOf(slot) === -1) {
+  if (SIM0913_SLOTS.indexOf(slot) === -1 &&
+      !(slot === SIM0913_NOON_SLOT && sim0913NoonOpen())) {
     return ContentService
       .createTextOutput(JSON.stringify({ status: "error", error: "Invalid heat time." }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -1165,7 +1217,7 @@ function handleSim0913(data) {
   var detailsTable =
     "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
     row("Event", SIM0913_EVENT) +
-    row("Heat Time", slot + " AM") +
+    row("Heat Time", sim0913HeatLabel(slot)) +
     row("Division", (data.sex ? data.sex + " " : "") + (data.division || "")) +
     row("Weights", (data.weights || "") + " (" + setup + ")") +
     row("Home Gym", data.homeGym || "") +
@@ -1189,7 +1241,7 @@ function handleSim0913(data) {
           "<div style='font-family:Arial,sans-serif;max-width:600px'>" +
           "<h2 style='margin-bottom:4px'>You're in, " + escapeHtml(data.firstName || "") + "!</h2>" +
           "<p>You're signed up for the <strong>" + SIM0913_EVENT + "</strong> at Koda CrossFit Iron View, " +
-          "740 S Pierce Ave, Louisville, CO. <strong>Your heat goes off at " + slot + " AM</strong> — " +
+          "740 S Pierce Ave, Louisville, CO. <strong>Your heat goes off at " + sim0913HeatLabel(slot) + "</strong> — " +
           "plan to arrive early to check in and warm up.</p>" +
           (teammateEmails.length
             ? "<p style='color:#555'>" + (teammateEmails.length === 1 ? "Your teammate is" : "Your teammates are") +
@@ -1214,7 +1266,7 @@ function handleSim0913(data) {
     try {
       MailApp.sendEmail({
         to: NOTIFY_EMAIL,
-        subject: "New Hyrox Sim 9/13 signup — " + registrant + " (" + slot + " AM, " +
+        subject: "New Hyrox Sim 9/13 signup — " + registrant + " (" + sim0913HeatLabel(slot) + ", " +
                  (data.sex ? data.sex + " " : "") + (data.division || "") + ", " +
                  athletes.length + (athletes.length === 1 ? " shirt" : " shirts") + ", " + (data.payment || "") + ")",
         htmlBody:
@@ -1428,6 +1480,20 @@ function doGet(e) {
   if (action === "sim0913SetColor") {
     return ContentService
       .createTextOutput(JSON.stringify(sim0913SetColor(e.parameter.athlete, e.parameter.color)))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913NoonStatus") {
+    var allNS = sim0913CountsAllHeats();
+    var blueUsedNS = 0;
+    SIM0913_SLOTS.forEach(function(s) { blueUsedNS += ((allNS[s] || {}).Blue) || 0; });
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        status: "ok",
+        blueUsed: blueUsedNS,
+        blueCap: SIM0913_SLOTS.length * SIM0913_GROUP_CAPS.Blue,
+        latched: PropertiesService.getScriptProperties().getProperty(SIM0913_NOON_PROP) === "1",
+        noonOpen: sim0913NoonOpen(allNS)
+      }))
       .setMimeType(ContentService.MimeType.JSON);
   }
   if (action === "sim0913Health") {

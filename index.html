@@ -1105,7 +1105,7 @@
       </div>
       <div class="meta-item">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Heats every 10 min &middot; 9:00 – 11:50 AM
+        <span id="heroHeats">Heats every 10 min &middot; 9:00 – 11:50 AM</span>
       </div>
       <div class="meta-item">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -1127,7 +1127,7 @@
       </div>
       <div class="info-row">
         <svg class="info-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <div><strong>You choose your heat time.</strong> <span>Heats go off every 10 minutes, 9:00–11:50 AM — live availability as you book.</span></div>
+        <div><strong>You choose your heat time.</strong> <span id="infoHeats">Heats go off every 10 minutes, 9:00–11:50 AM — live availability as you book.</span></div>
       </div>
     </div>
 
@@ -1371,6 +1371,25 @@
     // setup: 1 Men's Pro lane, 3 lanes for Men's Open / Women's Pro / Mixed,
     // 3 lanes for Women's Open, 1 Scaled lane. One lane per crew.
     var SLOTS = ['9:00','9:10','9:20','9:30','9:40','9:50','10:00','10:10','10:20','10:30','10:40','10:50','11:00','11:10','11:20','11:30','11:40','11:50'];
+
+    // The backend may publish extra heats (e.g. the 12:00 auto-heat once
+    // Women's Open sells out) — anything in the slots response that isn't in
+    // the base list gets appended in time order, and noon is labeled as noon.
+    function heatLabel(h) { return h === '12:00' ? '12:00 noon' : h + ' AM'; }
+    function mergeExtraSlots(counts) {
+      var extra = Object.keys(counts).filter(function(s) { return SLOTS.indexOf(s) === -1; });
+      if (!extra.length) return;
+      SLOTS = SLOTS.concat(extra).sort(function(a, b) {
+        var pa = a.split(':'), pb = b.split(':');
+        return (+pa[0] * 60 + +pa[1]) - (+pb[0] * 60 + +pb[1]);
+      });
+      if (SLOTS.indexOf('12:00') !== -1) {
+        var hero = document.getElementById('heroHeats');
+        if (hero) hero.textContent = 'Heats every 10 min · 9:00 AM – 12:00 noon';
+        var info = document.getElementById('infoHeats');
+        if (info) info.textContent = 'Heats go off every 10 minutes, 9:00 AM – 12:00 noon — live availability as you book.';
+      }
+    }
     var GROUP_CAPS = { 'Red': 1, 'Green': 3, 'Blue': 3, 'Scaled': 1 };
 
     // Which lane type a (category, weights) combo races in — mirrors the backend.
@@ -1781,7 +1800,7 @@
                        Blue: 'your division shares 3 lanes per heat', Scaled: 'Scaled has 1 lane per heat' }[group];
         var openCount = 0;
         SLOTS.forEach(function(s) { if (groupLeft(s, group) !== 0) openCount++; });
-        status.textContent = 'All times are AM · ' + capTxt +
+        status.textContent = (SLOTS.indexOf('12:00') !== -1 ? 'Heats 9:00 AM – 12:00 noon · ' : 'All times are AM · ') + capTxt +
           (slotsLoaded ? ' · ' + openCount + ' of ' + SLOTS.length + ' heats open for your division' : '');
       }
     }
@@ -1792,6 +1811,7 @@
         .then(function(resp) {
           if (resp.status !== 'ok') throw new Error('bad response');
           slotCounts = resp.counts || {};
+          mergeExtraSlots(slotCounts);
           slotsLoaded = true;
           renderSlots();
         })
@@ -1843,7 +1863,7 @@
           return athletes.length + ' shirts picked';
         }
         case 'weights': return (document.querySelector('input[name="weights"]:checked') || {}).value || '';
-        case 'heat': return selectedSlot ? selectedSlot + ' AM' : '';
+        case 'heat': return selectedSlot ? heatLabel(selectedSlot) : '';
         case 'gym': return document.getElementById('homeGym').value.trim();
         case 'payment': {
           var p = (document.querySelector('input[name="payment"]:checked') || {}).value;
@@ -2119,7 +2139,7 @@
             submitBtn.textContent = 'SIGN ME UP';
             selectedSlot = '';
             fetchSlots();
-            showError('The ' + data.heat + ' AM heat just ran out of lanes for your division — please pick another time.', 'heat');
+            showError('The ' + heatLabel(data.heat) + ' heat just ran out of lanes for your division — please pick another time.', 'heat');
             document.getElementById('slotGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
           } else {
             throw new Error(resp.error || "your signup didn't save — please try again");
@@ -2163,7 +2183,7 @@
       document.getElementById('successPay').innerHTML = payInstructionsHtml(data);
       var details = document.getElementById('successDetails');
       var rows = [
-        ['Heat Time', data.heat + ' AM'],
+        ['Heat Time', heatLabel(data.heat)],
         ['Division', data.sex + ' ' + data.division],
         ['Weights', data.weights],
         ['Home Gym', data.homeGym],
