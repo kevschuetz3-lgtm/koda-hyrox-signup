@@ -35,6 +35,57 @@
       font-size: 1.0625rem;
     }
 
+    /* ── Shirt-timing notice banner (top of page) ── */
+    .notice-banner {
+      background: #f3c34c;
+      color: #111;
+      padding: 22px 24px;
+      border-bottom: 3px solid #b88a1a;
+    }
+
+    .notice-inner {
+      max-width: 980px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      text-align: left;
+    }
+
+    .notice-ico {
+      flex: 0 0 auto;
+      width: 44px;
+      height: 44px;
+      color: #111;
+    }
+
+    .notice-head {
+      display: block;
+      font-family: 'Bebas Neue', sans-serif;
+      font-weight: 400;
+      font-size: clamp(1.6rem, 3.2vw, 2.1rem);
+      letter-spacing: 0.08em;
+      line-height: 1.05;
+      margin-bottom: 4px;
+    }
+
+    .notice-body {
+      display: block;
+      font-size: 1.1rem;
+      line-height: 1.45;
+      font-weight: 500;
+    }
+
+    .notice-body strong { font-weight: 800; }
+
+    @media (max-width: 560px) {
+      .notice-banner { padding: 18px 16px; }
+      .notice-inner { flex-direction: column; gap: 10px; text-align: center; }
+      .notice-ico { width: 36px; height: 36px; }
+      .notice-body { font-size: 1rem; }
+    }
+
     /* ── Hero ── */
     .hero {
       position: relative;
@@ -1089,6 +1140,17 @@
   </style>
 </head>
 <body>
+
+  <!-- ═══ SHIRT-TIMING NOTICE ═══ -->
+  <div class="notice-banner" role="note" aria-label="Shirt delivery notice">
+    <div class="notice-inner">
+      <svg class="notice-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div>
+        <span class="notice-head">Sign-ups are still open!</span>
+        <span class="notice-body">Heads up: we can't guarantee your shirt will be here by Sunday. If it isn't, <strong>no problem — you can pick up your shirt at the gym after the event.</strong></span>
+      </div>
+    </div>
+  </div>
 
   <!-- ═══ HERO ═══ -->
   <section class="hero">
