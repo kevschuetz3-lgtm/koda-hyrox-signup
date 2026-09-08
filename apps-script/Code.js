@@ -145,6 +145,11 @@ function doPost(e) {
       return handleClassTimes(data);
     }
 
+    // Hyrox class-time survey (sent to the Sept 13 participants) — type:"survey0913".
+    if (data.type === "survey0913") {
+      return handleSurvey0913(data);
+    }
+
     // September 13, 2026 simulation signups include type:"sim0913" —
     // their own spreadsheet, shirt orders, and payment instructions.
     if (data.type === "sim0913") {
@@ -431,6 +436,286 @@ function handleClassTimes(data) {
   return ContentService
     .createTextOutput(JSON.stringify({ status: "ok" }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HYROX CLASS-TIME SURVEY  (posted from survey.html with type:"survey0913")
+// Sent to the Sept 13 2026 simulation athletes after the event:
+// name + email + "What class times should we add to our Hyrox schedule?"
+// (Mon–Fri × SURVEY0913_TIMES checkbox grid).
+// Own spreadsheet ("Koda Hyrox Class Time Survey"): a "Responses" tab
+// (one row per person) + a formula-driven "Tally" tab (times × days counts
+// that update themselves as responses land).
+// ONE ROW PER EMAIL — resubmitting overwrites that person's earlier answer,
+// so submit-retries (the 8/18 response-loss failure mode) can't create
+// duplicates or skew the tally.
+// ═══════════════════════════════════════════════════════════════
+
+var SURVEY0913_SHEET_NAME = "Koda Hyrox Class Time Survey";
+var SURVEY0913_HEADERS = ["Timestamp", "Name", "Email", "Requested Class Times"];
+var SURVEY0913_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+// Must match GROUPS/TIMES in survey.html — unknown slots are dropped on save.
+var SURVEY0913_TIMES = ["5am", "5:30am", "6am", "6:30am", "7am", "4pm", "4:30pm", "5pm", "5:30pm", "6pm"];
+
+function survey0913Out(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getOrCreateSurvey0913Spreadsheet() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty("SURVEY0913_SHEET_ID");
+  if (id) {
+    try { return SpreadsheetApp.openById(id); } catch (e) { /* fall through and create */ }
+  }
+
+  var ss = SpreadsheetApp.create(SURVEY0913_SHEET_NAME);
+  var sheet = ss.getActiveSheet();
+  sheet.setName("Responses");
+  sheet.appendRow(SURVEY0913_HEADERS);
+  sheet.getRange(1, 1, 1, SURVEY0913_HEADERS.length)
+    .setFontWeight("bold")
+    .setBackground("#0a0a0a")
+    .setFontColor("#d6ff3f");
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidth(1, 160);
+  sheet.setColumnWidth(2, 180);
+  sheet.setColumnWidth(3, 240);
+  sheet.setColumnWidth(4, 520);
+  survey0913ApplyTextFormats(sheet);
+
+  survey0913BuildTallyTab(ss);
+
+  props.setProperty("SURVEY0913_SHEET_ID", ss.getId());
+  return ss;
+}
+
+// "Tally" tab: rows = times, columns = days; each cell counts responses that
+// asked for that slot. COUNTIF wildcards on the "Requested Class Times" text,
+// so it stays live without any script involvement. Safe to rebuild any time.
+function survey0913BuildTallyTab(ss) {
+  var tally = ss.getSheetByName("Tally") || ss.insertSheet("Tally");
+  tally.clear();
+
+  var header = ["Time"].concat(SURVEY0913_DAYS).concat(["Total"]);
+  var rows = [header];
+  var lastTimeRow = SURVEY0913_TIMES.length + 1;           // last row holding a time
+  var lastDayCol = String.fromCharCode(65 + SURVEY0913_DAYS.length); // "F" for 5 days
+
+  SURVEY0913_TIMES.forEach(function(t, i) {
+    var r = i + 2;
+    var cells = [t];
+    SURVEY0913_DAYS.forEach(function(d) {
+      cells.push('=COUNTIF(Responses!$D$2:$D,"*' + d + ' ' + t + '*")');
+    });
+    cells.push("=SUM(B" + r + ":" + lastDayCol + r + ")");
+    rows.push(cells);
+  });
+
+  var totalRow = ["Total"];
+  SURVEY0913_DAYS.forEach(function(d, j) {
+    var col = String.fromCharCode(66 + j); // B, C, D ...
+    totalRow.push("=SUM(" + col + "2:" + col + lastTimeRow + ")");
+  });
+  var totalRowNum = lastTimeRow + 1;
+  totalRow.push("=SUM(B" + totalRowNum + ":" + lastDayCol + totalRowNum + ")");
+  rows.push(totalRow);
+
+  // Force the Time column to TEXT before writing — otherwise Sheets coerces
+  // "5am" / "5:30am" into time-of-day values (same gotcha as the sim0913 heats).
+  tally.getRange(2, 1, rows.length - 1, 1).setNumberFormat("@");
+  tally.getRange(1, 1, rows.length, header.length).setValues(rows);
+  tally.getRange(1, 1, 1, header.length)
+    .setFontWeight("bold").setBackground("#0a0a0a").setFontColor("#d6ff3f");
+  tally.getRange(rows.length, 1, 1, header.length).setFontWeight("bold");
+  tally.getRange(rows.length + 2, 1).setValue("Responses");
+  tally.getRange(rows.length + 2, 2).setFormula("=COUNTA(Responses!$C$2:$C)");
+  tally.getRange(rows.length + 2, 1, 1, 2).setFontWeight("bold");
+  tally.setFrozenRows(1);
+  tally.setColumnWidth(1, 90);
+  return tally;
+}
+
+// Name / Email / Requested Class Times must stay TEXT — Sheets would otherwise
+// parse a time-like answer (e.g. a lone "Mon 5am") into a Date, and both the
+// COUNTIF tally and the Info summary would silently miss it.
+function survey0913ApplyTextFormats(sheet) {
+  var hm = survey0913HeaderMap(sheet);
+  var rows = Math.max(sheet.getMaxRows() - 1, 1);
+  ["name", "email", "requested class times"].forEach(function(key) {
+    if (hm[key] != null) sheet.getRange(2, hm[key] + 1, rows, 1).setNumberFormat("@");
+  });
+}
+
+function survey0913HeaderMap(sheet) {
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var idx = {};
+  headers.forEach(function(h, i) { idx[String(h).trim().toLowerCase()] = i; });
+  return idx;
+}
+
+// One past the last row with a real timestamp (NOT appendRow — a stray cell
+// far down the sheet would otherwise maroon every new response there).
+function survey0913NextRow(sheet, hm) {
+  var col = hm["timestamp"] != null ? hm["timestamp"] : 0;
+  var last = sheet.getLastRow();
+  if (last < 2) return 2;
+  var vals = sheet.getRange(2, col + 1, last - 1, 1).getValues();
+  for (var i = vals.length - 1; i >= 0; i--) {
+    if (String(vals[i][0]).trim() !== "") return i + 3;
+  }
+  return 2;
+}
+
+function survey0913FindRowByEmail(sheet, hm, email) {
+  var col = hm["email"];
+  if (col == null) return 0;
+  var last = sheet.getLastRow();
+  if (last < 2) return 0;
+  var vals = sheet.getRange(2, col + 1, last - 1, 1).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]).trim().toLowerCase() === email) return i + 2;
+  }
+  return 0;
+}
+
+// Keep only slots we actually offered, in Mon→Fri / early→late order.
+function survey0913NormalizeTimes(raw) {
+  var wanted = {};
+  String(raw || "").split(",").forEach(function(t) {
+    var k = t.trim().toLowerCase();
+    if (k) wanted[k] = true;
+  });
+  var kept = [];
+  SURVEY0913_DAYS.forEach(function(d) {
+    SURVEY0913_TIMES.forEach(function(t) {
+      var label = d + " " + t;
+      if (wanted[label.toLowerCase()]) kept.push(label);
+    });
+  });
+  return kept;
+}
+
+function handleSurvey0913(data) {
+  var name = String(data.name || "").trim();
+  var email = String(data.email || "").trim().toLowerCase();
+  var times = survey0913NormalizeTimes(data.classTimes);
+
+  if (!name) return survey0913Out({ status: "error", saved: false, error: "Name is required." });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return survey0913Out({ status: "error", saved: false, error: "A valid email is required." });
+  }
+  if (!times.length) return survey0913Out({ status: "error", saved: false, error: "Pick at least one class time." });
+
+  var timesText = times.join(", ");
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  var ss, rowNum, updated = false;
+  try {
+    ss = getOrCreateSurvey0913Spreadsheet();
+    var sheet = ss.getSheetByName("Responses") || ss.getSheets()[0];
+    var hm = survey0913HeaderMap(sheet);
+
+    rowNum = survey0913FindRowByEmail(sheet, hm, email);
+    if (rowNum) updated = true; else rowNum = survey0913NextRow(sheet, hm);
+
+    // Write only the columns we own (by header name), so any extra columns
+    // Kevin adds to the sheet are never clobbered on an update.
+    var values = {
+      "timestamp": new Date(),
+      "name": name,
+      "email": email,
+      "requested class times": timesText
+    };
+    Object.keys(values).forEach(function(key) {
+      if (hm[key] == null) return;
+      var cell = sheet.getRange(rowNum, hm[key] + 1);
+      if (key !== "timestamp") cell.setNumberFormat("@");
+      cell.setValue(values[key]);
+    });
+  } finally {
+    lock.releaseLock();
+  }
+
+  if (NOTIFY_EMAIL && !/test/i.test(name) && !/test/i.test(email)) {
+    try {
+      MailApp.sendEmail({
+        to: NOTIFY_EMAIL,
+        subject: "Hyrox class-time survey — " + name + (updated ? " (updated answer)" : ""),
+        htmlBody:
+          "<h3>Hyrox class-time survey response" + (updated ? " (updated)" : "") + "</h3>" +
+          "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
+          row("Name", name) +
+          row("Email", email) +
+          row("Times", timesText) +
+          "</table>" +
+          "<p><a href='" + ss.getUrl() + "'>Open the survey sheet</a> — the Tally tab has live counts per slot.</p>"
+      });
+    } catch (mailErr) {
+      Logger.log("Survey0913 email notification failed: " + mailErr);
+    }
+  }
+
+  return survey0913Out({ status: "ok", saved: true, row: rowNum, updated: updated, times: timesText });
+}
+
+// Sheet URL + response count + per-slot tally (computed here, independent of
+// the Tally tab's formulas). Test rows (name/email matching /test/i) excluded.
+function survey0913Summary() {
+  var ss = getOrCreateSurvey0913Spreadsheet();
+  var sheet = ss.getSheetByName("Responses") || ss.getSheets()[0];
+  var hm = survey0913HeaderMap(sheet);
+  var iName = hm["name"], iEmail = hm["email"], iTimes = hm["requested class times"];
+  var last = sheet.getLastRow();
+  var vals = last >= 2 ? sheet.getRange(2, 1, last - 1, sheet.getLastColumn()).getValues() : [];
+  var tally = {}, responses = 0, testRows = 0;
+  SURVEY0913_DAYS.forEach(function(d) {
+    SURVEY0913_TIMES.forEach(function(t) { tally[d + " " + t] = 0; });
+  });
+  vals.forEach(function(r) {
+    var nm = String(iName != null ? r[iName] : "").trim();
+    var em = String(iEmail != null ? r[iEmail] : "").trim();
+    if (!nm && !em) return;
+    if (/test/i.test(nm) || /test/i.test(em)) { testRows++; return; }
+    responses++;
+    String(iTimes != null ? r[iTimes] : "").split(",").forEach(function(t) {
+      var k = t.trim();
+      if (tally.hasOwnProperty(k)) tally[k]++;
+    });
+  });
+  var ranked = Object.keys(tally)
+    .filter(function(k) { return tally[k] > 0; })
+    .sort(function(a, b) { return tally[b] - tally[a]; })
+    .map(function(k) { return { slot: k, count: tally[k] }; });
+  // Computed values of the formula-driven Tally tab (lets a caller verify the formulas evaluate).
+  var tallyTab = null;
+  var tt = ss.getSheetByName("Tally");
+  if (tt) tallyTab = tt.getRange(1, 1, SURVEY0913_TIMES.length + 2, SURVEY0913_DAYS.length + 2).getValues();
+  return { status: "ok", name: ss.getName(), url: ss.getUrl(), responses: responses, testRows: testRows, top: ranked.slice(0, 10), tally: tally, tallyTab: tallyTab };
+}
+
+// Delete rows whose Name or Email matches /test/i (bottom-up so indices hold).
+function survey0913ClearTests() {
+  var ss = getOrCreateSurvey0913Spreadsheet();
+  var sheet = ss.getSheetByName("Responses") || ss.getSheets()[0];
+  var hm = survey0913HeaderMap(sheet);
+  var iName = hm["name"], iEmail = hm["email"];
+  var last = sheet.getLastRow();
+  var removed = [];
+  if (last >= 2) {
+    var vals = sheet.getRange(2, 1, last - 1, sheet.getLastColumn()).getValues();
+    for (var i = vals.length - 1; i >= 0; i--) {
+      var nm = String(iName != null ? vals[i][iName] : "");
+      var em = String(iEmail != null ? vals[i][iEmail] : "");
+      if (/test/i.test(nm) || /test/i.test(em)) {
+        sheet.deleteRow(i + 2);
+        removed.push({ row: i + 2, name: nm.trim(), email: em.trim() });
+      }
+    }
+  }
+  return { status: "ok", removed: removed.length, rows: removed.reverse() };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1505,6 +1790,18 @@ function doGet(e) {
         shirtsRows: ssH.getSheetByName("Shirts").getLastRow() - 1
       }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "survey0913Info") {
+    return survey0913Out(survey0913Summary());
+  }
+  if (action === "survey0913ClearTests") {
+    return survey0913Out(survey0913ClearTests());
+  }
+  if (action === "survey0913RebuildTally") {
+    var ssRT = getOrCreateSurvey0913Spreadsheet();
+    survey0913ApplyTextFormats(ssRT.getSheetByName("Responses") || ssRT.getSheets()[0]);
+    survey0913BuildTallyTab(ssRT);
+    return survey0913Out({ status: "ok", rebuilt: "Tally" });
   }
   if (action === "sim0913Info") {
     var ss0913 = getOrCreateSim0913Spreadsheet();

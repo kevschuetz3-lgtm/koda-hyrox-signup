@@ -15,7 +15,7 @@ Single-page signup form for the Hyrox Simulation at Koda CrossFit Iron View on *
 - Shirt mockup assets live in `assets/mockups/` — three layers per garment: `*-base.jpg` (blank black shirt), `*-hyrox.png` (wordmark mask, tinted to the chosen vinyl), `*-koda.png` ("KODA CROSSFIT", always white). Source artwork is `assets/source/HYROX-Designs-01.ai`; rebuild with the scripts in `tools/` (see `tools/README.md`).
 - Payment: Venmo @kevin-schuetz-5 / Zelle kodaironview@gmail.com / Zen Planner CC product `5F4A8380-AC28-409B-A664-E088BB910ED0` ($25, each athlete pays their own).
 - `?action=sim0913FixHeaders` rewrites the header rows of both tabs to match the code (safe to re-run; used once when the heat/category columns were added).
-- `feedback.html` and `class-times.html` are left over from the June event (unlinked but live).
+- `feedback.html` and `class-times.html` are left over from the June event (unlinked but live). `survey.html` is the post-event class-time survey for the Sept 13 athletes (see below).
 
 ---
 
@@ -160,6 +160,20 @@ It posts to the same web app with `type: "classtimes"` and lands in its **own** 
 |---|---|
 | Name | **required** |
 | Preferred class times | checkbox grid (Mon–Fri × the 8 times), at least one required |
+
+## Hyrox class-time survey (Sept 13 2026 participants)
+
+`survey.html` — sent to the Sept 13 simulation athletes after the event. Three fields only: **name**, **email**, and *"What class times should we add to our Hyrox schedule?"* as a Mon–Fri checkbox grid (5am, 5:30am, 6am, 6:30am, 7am, 4pm, 4:30pm, 5pm, 5:30pm, 6pm). Live at `.../survey.html`.
+
+It posts to the same web app with `type: "survey0913"` and lands in its own spreadsheet, **"Koda Hyrox Class Time Survey"**: a `Responses` tab (one row per person) and a formula-driven `Tally` tab (times × days counts that update live). **One row per email** — resubmitting overwrites that person's earlier answer, so submit-retries can't create duplicates or skew the tally. Each response also emails `NOTIFY_EMAIL`.
+
+| GET action | What it does |
+|---|---|
+| `?action=survey0913Info` | Sheet URL, response count, per-slot tally (test rows excluded) |
+| `?action=survey0913ClearTests` | Deletes rows whose name/email matches /test/i |
+| `?action=survey0913RebuildTally` | Recreates the Tally tab and re-applies text formats on Responses (if someone breaks the formulas) |
+
+To change the offered times, edit `SURVEY0913_TIMES` in `apps-script/Code.js` **and** `GROUPS` in `survey.html` (they must match — the backend drops slots it doesn't recognize), then `clasp push` + `clasp redeploy` as above.
 
 ### Known failure mode (fixed 2026-08-18)
 
