@@ -1437,7 +1437,11 @@
     // The backend may publish extra heats (e.g. the 12:00 auto-heat once
     // Women's Open sells out) — anything in the slots response that isn't in
     // the base list gets appended in time order, and noon is labeled as noon.
-    function heatLabel(h) { return h === '12:00' ? '12:00 noon' : h + ' AM'; }
+    function heatLabel(h) {
+      if (h === '12:00') return '12:00 noon';
+      return (+h.split(':')[0] >= 12) ? h + ' PM' : h + ' AM';
+    }
+    function hasOverflow() { return SLOTS.some(function(s) { return +s.split(':')[0] >= 12; }); }
     function mergeExtraSlots(counts) {
       var extra = Object.keys(counts).filter(function(s) { return SLOTS.indexOf(s) === -1; });
       if (!extra.length) return;
@@ -1445,11 +1449,12 @@
         var pa = a.split(':'), pb = b.split(':');
         return (+pa[0] * 60 + +pa[1]) - (+pb[0] * 60 + +pb[1]);
       });
-      if (SLOTS.indexOf('12:00') !== -1) {
+      if (hasOverflow()) {
+        var range = '9:00 AM – ' + heatLabel(SLOTS[SLOTS.length - 1]);
         var hero = document.getElementById('heroHeats');
-        if (hero) hero.textContent = 'Heats every 10 min · 9:00 AM – 12:00 noon';
+        if (hero) hero.textContent = 'Heats every 10 min · ' + range;
         var info = document.getElementById('infoHeats');
-        if (info) info.textContent = 'Heats go off every 10 minutes, 9:00 AM – 12:00 noon — live availability as you book.';
+        if (info) info.textContent = 'Heats go off every 10 minutes, ' + range + ' — live availability as you book.';
       }
     }
     var GROUP_CAPS = { 'Red': 1, 'Green': 3, 'Blue': 3, 'Scaled': 1 };
@@ -1862,7 +1867,7 @@
                        Blue: 'your division shares 3 lanes per heat', Scaled: 'Scaled has 1 lane per heat' }[group];
         var openCount = 0;
         SLOTS.forEach(function(s) { if (groupLeft(s, group) !== 0) openCount++; });
-        status.textContent = (SLOTS.indexOf('12:00') !== -1 ? 'Heats 9:00 AM – 12:00 noon · ' : 'All times are AM · ') + capTxt +
+        status.textContent = (hasOverflow() ? 'Heats 9:00 AM – ' + heatLabel(SLOTS[SLOTS.length - 1]) + ' · ' : 'All times are AM · ') + capTxt +
           (slotsLoaded ? ' · ' + openCount + ' of ' + SLOTS.length + ' heats open for your division' : '');
       }
     }

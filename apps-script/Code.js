@@ -743,40 +743,76 @@ var SIM0913_SLOTS = [
 ];
 var SIM0913_GROUP_CAPS = { "Red": 1, "Green": 3, "Blue": 3, "Scaled": 1 };
 
-// ── 12:00 auto-heat (Kevin 9/6): once every Women's Open (Blue) lane in the
-// base 9:00–11:50 heats is taken, publish one extra noon heat with the
-// standard 1/3/3/1 lane split. Latched via script property so the heat stays
-// open even if a morning Blue lane frees up afterward — athletes may already
-// hold noon lanes by then.
-var SIM0913_NOON_SLOT = "12:00";
+// ── Overflow heats (Kevin 9/6 noon; 12:10 added 9/12). An ORDERED chain of
+// extra heats after the base 9:00–11:50 block. Each opens — and latches via its
+// own script property — once EITHER shared 3-lane division, Green (Men's
+// Open/Women's Pro/Mixed) or Blue (Women's Open), is fully booked across the
+// base heats PLUS every earlier overflow heat already open. So 12:00 opens when
+// the morning's Green/Blue sell out; 12:10 opens only after 12:00 exists AND its
+// Green/Blue lanes are gone too. Latched so a heat stays open even if a lane
+// later frees (athletes may already hold it). Same 1/3/3/1 split as every heat.
+var SIM0913_NOON_SLOT = "12:00";           // kept for back-compat references
 var SIM0913_NOON_PROP = "SIM0913_NOON_OPEN";
+var SIM0913_OVERFLOW = [
+  { slot: "12:00", prop: "SIM0913_NOON_OPEN", label: "12:00 noon" },
+  { slot: "12:10", prop: "SIM0913_1210_OPEN", label: "12:10 PM" }
+];
+
+// Which overflow slots are currently open, cascading in order. Auto-latches and
+// emails when a slot's trigger fires. Never opens a later slot before an earlier.
+function sim0913OpenOverflowSlots(allCounts) {
+  var counts = allCounts || sim0913CountsAllHeats();
+  var props = PropertiesService.getScriptProperties();
+  var open = [];
+  var active = SIM0913_SLOTS.slice();  // heats counted toward the fill check so far
+  for (var i = 0; i < SIM0913_OVERFLOW.length; i++) {
+    var ov = SIM0913_OVERFLOW[i];
+    var isOpen = props.getProperty(ov.prop) === "1";
+    if (!isOpen) {
+      var g = 0, b = 0;
+      active.forEach(function(s) { g += ((counts[s] || {}).Green) || 0; b += ((counts[s] || {}).Blue) || 0; });
+      var full = [];
+      if (g >= active.length * SIM0913_GROUP_CAPS.Green) full.push("Men's Open / Women's Pro / Mixed (Green)");
+      if (b >= active.length * SIM0913_GROUP_CAPS.Blue)  full.push("Women's Open (Blue)");
+      if (full.length) {
+        props.setProperty(ov.prop, "1");
+        isOpen = true;
+        if (NOTIFY_EMAIL) {
+          try {
+            MailApp.sendEmail({
+              to: NOTIFY_EMAIL,
+              subject: "Hyrox Sim 9/13 — " + ov.label + " heat auto-opened",
+              htmlBody: full.join(" and ") + " filled up across every open heat, so the signup site just published the extra <strong>" + ov.label + "</strong> heat (standard 1 Red / 3 Green / 3 Blue / 1 Scaled lanes). No action needed."
+            });
+          } catch (e) { /* the latch must not fail on a mail error */ }
+        }
+      }
+    }
+    if (isOpen) { open.push(ov.slot); active.push(ov.slot); }
+    else break;  // gate later overflow heats on the earlier one being open
+  }
+  return open;
+}
 
 function sim0913NoonOpen(allCounts) {
-  var props = PropertiesService.getScriptProperties();
-  if (props.getProperty(SIM0913_NOON_PROP) === "1") return true;
-  var counts = allCounts || sim0913CountsAllHeats();
-  var blueUsed = 0;
-  SIM0913_SLOTS.forEach(function(s) { blueUsed += ((counts[s] || {}).Blue) || 0; });
-  if (blueUsed < SIM0913_SLOTS.length * SIM0913_GROUP_CAPS.Blue) return false;
-  props.setProperty(SIM0913_NOON_PROP, "1");
-  if (NOTIFY_EMAIL) {
-    try {
-      MailApp.sendEmail({
-        to: NOTIFY_EMAIL,
-        subject: "Hyrox Sim 9/13 — 12:00 noon heat auto-opened",
-        htmlBody: "Every Women's Open (Blue) lane from 9:00–11:50 is now taken, so the signup site just published the extra <strong>12:00 noon</strong> heat (standard 1 Red / 3 Green / 3 Blue / 1 Scaled lanes). This is the auto-open requested on 9/6 — no action needed."
-      });
-    } catch (e) { /* the latch must not fail on a mail error */ }
-  }
-  return true;
+  return sim0913OpenOverflowSlots(allCounts).indexOf(SIM0913_NOON_SLOT) !== -1;
 }
 
 function sim0913EffectiveSlots(allCounts) {
-  return sim0913NoonOpen(allCounts) ? SIM0913_SLOTS.concat([SIM0913_NOON_SLOT]) : SIM0913_SLOTS.slice();
+  return SIM0913_SLOTS.concat(sim0913OpenOverflowSlots(allCounts));
+}
+
+// A heat is valid to book/audit if it's a base slot or a currently-open overflow slot.
+function sim0913IsValidHeat(slot, allCounts) {
+  return SIM0913_SLOTS.indexOf(slot) !== -1 ||
+         sim0913OpenOverflowSlots(allCounts).indexOf(slot) !== -1;
 }
 
 function sim0913HeatLabel(slot) {
-  return slot === SIM0913_NOON_SLOT ? slot + " noon" : slot + " AM";
+  for (var i = 0; i < SIM0913_OVERFLOW.length; i++) {
+    if (SIM0913_OVERFLOW[i].slot === slot) return SIM0913_OVERFLOW[i].label;
+  }
+  return slot + " AM";
 }
 
 // "Status" is appended LAST (added after the sheet had live data, so appending
@@ -901,8 +937,7 @@ function sim0913Audit() {
     else { var ek=em.toLowerCase(); (byEmail[ek]=byEmail[ek]||[]).push(row); }
     if (reg) { var nk=reg.toLowerCase(); (byName[nk]=byName[nk]||[]).push(row); }
     var heat = sim0913NormalizeHeat(r[G.heat]);
-    if (SIM0913_SLOTS.indexOf(heat)===-1 &&
-        !(heat===SIM0913_NOON_SLOT && sim0913NoonOpen())) add("error","bad-heat","Heat \""+heat+"\" is not a valid slot: "+reg,row);
+    if (!sim0913IsValidHeat(heat)) add("error","bad-heat","Heat \""+heat+"\" is not a valid slot: "+reg,row);
     var grp = String(r[G.setup]||"").split(" ")[0];
     if (!SIM0913_GROUP_CAPS[grp]) add("error","bad-group","No/unknown weight setup ("+grp+"): "+reg,row);
     else { var k=heat+"|"+grp; (capUse[k]=capUse[k]||[]).push(reg); }
@@ -958,7 +993,8 @@ function sim0913Grid() {
   var m = sim0913HeaderMap(sg);
   var C = { reg: sim0913Col(m,"registrant",1), div: sim0913Col(m,"division",3), sex: sim0913Col(m,"sex",4),
             wts: sim0913Col(m,"weights",5), setup: sim0913Col(m,"weights setup",6), heat: sim0913Col(m,"heat",8),
-            n: sim0913Col(m,"athletes",9), status: sim0913Col(m,"status",-1), paid: sim0913Col(m,"paid?",13) };
+            n: sim0913Col(m,"athletes",9), shirts: sim0913Col(m,"shirts",10),
+            status: sim0913Col(m,"status",-1), paid: sim0913Col(m,"paid?",13) };
   var grid = {};
   var gridSlots = sim0913EffectiveSlots();
   gridSlots.forEach(function(t){ grid[t] = { Red:[], Green:[], Blue:[], Scaled:[] }; });
@@ -971,7 +1007,14 @@ function sim0913Grid() {
     var grp = String(r[C.setup]||"").split(" ")[0];
     if (!grid[heat] || !grid[heat][grp]) return;
     var n = parseInt(r[C.n],10); if (isNaN(n)) n = 1;
-    grid[heat][grp].push({ name: reg, division: String(r[C.div]||""), sex: String(r[C.sex]||""),
+    // Every athlete's name in the crew, from the "Shirts" summary column
+    // ("Name — Garment / Size / Color" per line). Registrant first.
+    var names = String(r[C.shirts]||"").split(/\r?\n/).map(function(ln){
+      return ln.split("—")[0].split(" - ")[0].trim();
+    }).filter(function(x){ return x; });
+    if (!names.length) names = [reg];
+    grid[heat][grp].push({ name: reg, names: names,
+                           division: String(r[C.div]||""), sex: String(r[C.sex]||""),
                            weights: String(r[C.wts]||""), athletes: n,
                            paid: String(r[C.paid]||"").trim() !== "" });
     totalAthletes += n; totalCrews++;
@@ -1421,8 +1464,7 @@ function handleSim0913(data) {
   // Heat slot: validate + enforce the per-lane-type cap under a lock so
   // two simultaneous signups can't both grab the last lane of a type.
   var slot = String(data.heat || "").trim();
-  if (SIM0913_SLOTS.indexOf(slot) === -1 &&
-      !(slot === SIM0913_NOON_SLOT && sim0913NoonOpen())) {
+  if (!sim0913IsValidHeat(slot)) {
     return ContentService
       .createTextOutput(JSON.stringify({ status: "error", error: "Invalid heat time." }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -1769,15 +1811,49 @@ function doGet(e) {
   }
   if (action === "sim0913NoonStatus") {
     var allNS = sim0913CountsAllHeats();
-    var blueUsedNS = 0;
-    SIM0913_SLOTS.forEach(function(s) { blueUsedNS += ((allNS[s] || {}).Blue) || 0; });
+    var propsNS = PropertiesService.getScriptProperties();
+    var openNS = sim0913OpenOverflowSlots(allNS);  // cascades + latches as needed
+    // Per-overflow fill status against the heats open BEFORE it (base + earlier overflow).
+    var chainNS = [], activeNS = SIM0913_SLOTS.slice();
+    SIM0913_OVERFLOW.forEach(function(ov) {
+      var g = 0, b = 0;
+      activeNS.forEach(function(s) { g += ((allNS[s] || {}).Green) || 0; b += ((allNS[s] || {}).Blue) || 0; });
+      chainNS.push({
+        slot: ov.slot, label: ov.label,
+        greenUsed: g, blueUsed: b, cap: activeNS.length * SIM0913_GROUP_CAPS.Green,
+        latched: propsNS.getProperty(ov.prop) === "1",
+        open: openNS.indexOf(ov.slot) !== -1
+      });
+      if (openNS.indexOf(ov.slot) !== -1) activeNS.push(ov.slot);
+    });
     return ContentService
       .createTextOutput(JSON.stringify({
         status: "ok",
-        blueUsed: blueUsedNS,
-        blueCap: SIM0913_SLOTS.length * SIM0913_GROUP_CAPS.Blue,
-        latched: PropertiesService.getScriptProperties().getProperty(SIM0913_NOON_PROP) === "1",
-        noonOpen: sim0913NoonOpen(allNS)
+        openOverflow: openNS,
+        chain: chainNS,
+        noonOpen: openNS.indexOf(SIM0913_NOON_SLOT) !== -1
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "sim0913SetNoon") {
+    // Manual override for an overflow-heat latch. ?open=1 force-opens (default),
+    // ?open=0 resets; ?slot=12:10 targets a specific overflow heat (default 12:00).
+    var propsSN = PropertiesService.getScriptProperties();
+    var slotSN = e.parameter.slot || SIM0913_NOON_SLOT;
+    var ovSN = SIM0913_OVERFLOW.filter(function(o) { return o.slot === slotSN; })[0];
+    if (!ovSN) return ContentService
+      .createTextOutput(JSON.stringify({ status: "error", error: "unknown overflow slot: " + slotSN,
+        validSlots: SIM0913_OVERFLOW.map(function(o){return o.slot;}) }))
+      .setMimeType(ContentService.MimeType.JSON);
+    var openSN = String(e.parameter.open == null ? "1" : e.parameter.open) === "1";
+    if (openSN) propsSN.setProperty(ovSN.prop, "1");
+    else propsSN.deleteProperty(ovSN.prop);
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        status: "ok",
+        slot: slotSN,
+        forcedOpen: openSN,
+        latched: propsSN.getProperty(ovSN.prop) === "1"
       }))
       .setMimeType(ContentService.MimeType.JSON);
   }
