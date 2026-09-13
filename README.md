@@ -114,15 +114,44 @@ Just open `index.html` in a browser. While `SCRIPT_URL` is still the placeholder
 
 ---
 
-## Post-event feedback survey
+## Post-event feedback survey (Sept 13 2026 version)
 
-A second page, `feedback.html`, collects post-event feedback. It's served from the same GitHub Pages site at `.../feedback.html` and is **already live** — no extra setup needed.
+`feedback.html` is the post-event feedback form. It was **rebuilt on 2026-09-13 for the Sept 13 simulation** — the June 7 version is in git history (commit `169230d` and earlier) and its responses stay in the old "Koda Hyrox Feedback" sheet. Same URL as before: `.../feedback.html`.
 
 ### How it works
 
-Rather than a separate Apps Script project, the feedback page posts to the **same** web app as signups (`apps-script/Code.js`). The backend looks for `type: "feedback"` in the payload and routes those submissions to their **own** spreadsheet — **"Koda Hyrox Feedback"** in your Drive — so feedback and signups never mix. This reuses the existing authorization, so nothing new had to be authorized.
+The page posts to the **same** web app as signups (`apps-script/Code.js`) with `type: "feedback0913"`. The backend routes those submissions to their **own** spreadsheet — **"Koda Hyrox Feedback — Sept 13 2026"** in your Drive — with two tabs:
 
-To change the feedback questions/columns later, edit `apps-script/Code.js` (the `handleFeedback` / `FEEDBACK_HEADERS` section), then from the `apps-script/` folder:
+- `Responses` — one row per person. **One row per email**: resubmitting overwrites that person's earlier answer, so submit-retries can't create duplicates.
+- `Class Tally` — one row per offered class with a live count of how many people picked it (HYROX rows shaded), plus a summary block (responses, Free Week yes/no, average ratings). Formula-driven, so it updates itself.
+
+Each non-test response also emails `NOTIFY_EMAIL`; the subject starts with **[FREE WEEK]** when the person said yes, and the classes they picked are listed in the body.
+
+### Questions collected
+
+| Field | Type |
+|---|---|
+| Name / Email | **required** (top of the form) |
+| Overall rating | 1–5 |
+| Organization (check-in, heats, station flow) | 1–5 |
+| Hyrox accuracy (stations, order, distances, transitions) | 1–5 |
+| Likelihood to do another | 1–5 |
+| Energy / atmosphere (music, cheering, judges) | 1–5 |
+| **Free Week at Koda 9/14–9/19** — "Would you like to come to any classes this week?" | Yes / No thanks |
+| Which classes do you want to try? | checkbox pills, shown only on **Yes**; one per class on the Mon 9/14 – Sat 9/19 schedule (HYROX highlighted in yellow, everything else muted); at least one required when Yes |
+| Comments | optional text |
+
+The class list lives in **two places that must match**: `SCHEDULE` in `feedback.html` and `FEEDBACK0913_SCHEDULE` in `apps-script/Code.js` (the backend drops any class it doesn't recognize, and the tally is built from the backend list). It was pulled from https://www.kodacrossfitironview.com/Schedule on 9/13/2026 (Mon–Sat; Sunday isn't part of Free Week). To change it, edit both, then `clasp push` + `clasp redeploy` (below) and hit `?action=feedback0913RebuildTally` once.
+
+The June form's training-program question and its "what class times should we add" grid were removed (the class-times question is `survey.html`, below).
+
+| GET action | What it does |
+|---|---|
+| `?action=feedback0913Info` | Sheet URL, response count, Free Week yes/no, average ratings, per-class picks (test rows excluded) |
+| `?action=feedback0913ClearTests` | Deletes rows whose name/email matches /test/i |
+| `?action=feedback0913RebuildTally` | Recreates the Class Tally tab and re-applies text formats on Responses |
+
+To change anything in the backend, edit the `handleFeedback0913` / `FEEDBACK0913_*` section of `apps-script/Code.js`, then from the `apps-script/` folder:
 
 ```bash
 clasp push
@@ -131,22 +160,9 @@ clasp redeploy AKfycbwWjHrhE6k3vVPDXD4qi3VLxZVAXMykAFIKocoUiq0BtXdv2XLy7Oo0GRfrP
 
 (The URL stays the same across redeploys.) `apps-script-backend.js` in the repo root is a reference copy of the deployed `Code.js`.
 
-### Questions collected
+### June 7 2026 version (retired)
 
-| Field | Type |
-|---|---|
-| Overall rating | 1–5 |
-| Organization (check-in, heats, station flow) | 1–5 |
-| Hyrox accuracy (stations, order, distances, transitions) | 1–5 |
-| Likelihood to do another | 1–5 |
-| Energy / atmosphere (music, cheering, judges) | 1–5 |
-| Interested in a lead-up training program (next sim / Nov Denver Hyrox) | Yes / No |
-| Interested in a free class at Koda Iron View | Yes / No |
-| Suggested class times to add | checkbox grid (Mon–Fri × 6:30am, 7:30am, 11am, Noon, 4pm, 4:30pm, 5:00pm, 5:30pm) — shown only if "free class" = Yes |
-| Comments | optional text |
-| Name / Email | **required** (at the top of the form) |
-
-Name and email are required; the rating/Yes-No questions are optional. The class-times grid only appears when they pick **Yes** for the free class. The training-program question is the last question.
+The original form (`type: "feedback"`, sheet "Koda Hyrox Feedback") had the same five ratings plus a "free class" Yes/No, a Mon–Fri class-times grid, a training-program question, and comments. The `handleFeedback` backend section is still deployed, so the old sheet keeps working if that version is ever restored from git.
 
 ---
 

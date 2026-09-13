@@ -150,6 +150,12 @@ function doPost(e) {
       return handleSurvey0913(data);
     }
 
+    // Sept 13 2026 post-event feedback (feedback.html, rebuilt 9/13 with the
+    // FREE WEEK 9/14–9/19 class picker) — type:"feedback0913".
+    if (data.type === "feedback0913") {
+      return handleFeedback0913(data);
+    }
+
     // September 13, 2026 simulation signups include type:"sim0913" —
     // their own spreadsheet, shirt orders, and payment instructions.
     if (data.type === "sim0913") {
@@ -436,6 +442,407 @@ function handleClassTimes(data) {
   return ContentService
     .createTextOutput(JSON.stringify({ status: "ok" }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SEPT 13 2026 POST-EVENT FEEDBACK  (posted from feedback.html with type:"feedback0913")
+// The June feedback form rebuilt for the Sept 13 simulation (Kevin 9/13):
+// same five 1–5 ratings + comments, but the "free class" question became
+// FREE WEEK AT KODA 9/14–9/19 — "Would you like to come to any classes this
+// week?" (Yes / No thanks) and, on Yes, a checklist of every class on
+// kodacrossfitironview.com/Schedule for Mon–Sat that week (HYROX highlighted).
+// The June training-program question was dropped.
+// Own spreadsheet ("Koda Hyrox Feedback — Sept 13 2026"): a "Responses" tab
+// (ONE ROW PER EMAIL — resubmitting overwrites that person's earlier answer,
+// so submit-retries can't create duplicates) and a formula-driven
+// "Class Tally" tab (how many people picked each class + summary stats).
+// ═══════════════════════════════════════════════════════════════
+
+var FEEDBACK0913_SHEET_NAME = "Koda Hyrox Feedback — Sept 13 2026";
+var FEEDBACK0913_HEADERS = [
+  "Timestamp", "Name", "Email",
+  "Overall (1-5)", "Organization (1-5)", "Hyrox Accuracy (1-5)",
+  "Likelihood to Repeat (1-5)", "Atmosphere (1-5)",
+  "Free Week?", "Free Week Classes", "Comments"
+];
+// [payload field, header (lowercase), short label]
+var FEEDBACK0913_RATINGS = [
+  ["overall",      "overall (1-5)",              "Overall"],
+  ["organization", "organization (1-5)",         "Organization"],
+  ["accuracy",     "hyrox accuracy (1-5)",       "Hyrox Accuracy"],
+  ["likelihood",   "likelihood to repeat (1-5)", "Likelihood to Repeat"],
+  ["atmosphere",   "atmosphere (1-5)",           "Atmosphere"]
+];
+// Free Week class schedule (Mon 9/14 – Sat 9/19), pulled from
+// kodacrossfitironview.com/Schedule on 9/13/2026. Must match SCHEDULE in
+// feedback.html — any class the page sends that isn't listed here is dropped.
+var FEEDBACK0913_SCHEDULE = [
+  { day: "Mon", date: "9/14", classes: [
+    ["5:00 AM", "CrossFit"], ["5:30 AM", "CrossFit"], ["6:00 AM", "CrossFit"], ["6:30 AM", "CrossFit"],
+    ["7:45 AM", "CrossFit"], ["8:45 AM", "KodaFit"], ["9:00 AM", "HYROX"], ["9:45 AM", "CrossFit"],
+    ["11:00 AM", "CrossFit"], ["12:15 PM", "CrossFit"], ["1:30 PM", "Competitor"], ["3:30 PM", "CrossFit"],
+    ["4:00 PM", "CrossFit"], ["4:30 PM", "CrossFit"], ["5:15 PM", "CrossFit"], ["5:45 PM", "CrossFit"],
+    ["6:30 PM", "CrossFit"]
+  ] },
+  { day: "Tue", date: "9/15", classes: [
+    ["5:00 AM", "CrossFit"], ["5:30 AM", "CrossFit"], ["5:30 AM", "HYROX"], ["6:00 AM", "CrossFit"],
+    ["6:30 AM", "CrossFit"], ["6:30 AM", "HYROX"], ["7:30 AM", "Women's Strength"], ["7:45 AM", "CrossFit"],
+    ["8:45 AM", "Women's Strength"], ["9:45 AM", "CrossFit"], ["9:45 AM", "Women's Strength"], ["11:00 AM", "CrossFit"],
+    ["12:00 PM", "HYROX"], ["12:15 PM", "CrossFit"], ["1:30 PM", "Competitor"], ["3:30 PM", "CrossFit"],
+    ["4:00 PM", "CrossFit"], ["4:00 PM", "Women's Strength"], ["4:30 PM", "CrossFit"], ["5:00 PM", "Women's Strength"],
+    ["5:15 PM", "CrossFit"], ["5:15 PM", "HYROX"], ["5:45 PM", "CrossFit"], ["6:00 PM", "Kratos Oly Class"],
+    ["6:30 PM", "CrossFit"]
+  ] },
+  { day: "Wed", date: "9/16", classes: [
+    ["5:00 AM", "CrossFit"], ["5:30 AM", "CrossFit"], ["6:00 AM", "CrossFit"], ["6:30 AM", "CrossFit"],
+    ["7:45 AM", "CrossFit"], ["8:45 AM", "KodaFit"], ["9:45 AM", "CrossFit"], ["11:00 AM", "CrossFit"],
+    ["12:15 PM", "CrossFit"], ["1:30 PM", "Competitor"], ["3:30 PM", "CrossFit"], ["4:00 PM", "CrossFit"],
+    ["4:15 PM", "Kids (8-10)"], ["4:30 PM", "CrossFit"], ["5:15 PM", "CrossFit"], ["5:45 PM", "CrossFit"],
+    ["6:30 PM", "CrossFit"]
+  ] },
+  { day: "Thu", date: "9/17", classes: [
+    ["5:00 AM", "CrossFit"], ["5:30 AM", "CrossFit"], ["5:30 AM", "HYROX"], ["6:00 AM", "CrossFit"],
+    ["6:30 AM", "CrossFit"], ["6:30 AM", "HYROX"], ["7:30 AM", "Women's Strength"], ["7:45 AM", "CrossFit"],
+    ["8:45 AM", "Women's Strength"], ["9:00 AM", "HYROX"], ["9:45 AM", "CrossFit"], ["9:45 AM", "Women's Strength"],
+    ["11:00 AM", "CrossFit"], ["12:00 PM", "HYROX"], ["12:15 PM", "CrossFit"], ["1:30 PM", "Competitor"],
+    ["3:30 PM", "CrossFit"], ["4:00 PM", "CrossFit"], ["4:00 PM", "Women's Strength"], ["4:30 PM", "CrossFit"],
+    ["5:00 PM", "Women's Strength"], ["5:15 PM", "CrossFit"], ["5:15 PM", "HYROX"], ["5:45 PM", "CrossFit"],
+    ["6:00 PM", "Kratos Oly Class"], ["6:30 PM", "CrossFit"]
+  ] },
+  { day: "Fri", date: "9/18", classes: [
+    ["5:00 AM", "CrossFit"], ["5:30 AM", "CrossFit"], ["6:00 AM", "CrossFit"], ["6:30 AM", "CrossFit"],
+    ["7:30 AM", "Women's Strength"], ["7:45 AM", "CrossFit"], ["8:45 AM", "KodaFit"], ["8:45 AM", "Women's Strength"],
+    ["9:45 AM", "CrossFit"], ["11:00 AM", "CrossFit"], ["12:15 PM", "CrossFit"], ["1:30 PM", "Competitor"],
+    ["4:00 PM", "CrossFit"], ["5:00 PM", "CrossFit"], ["6:00 PM", "CrossFit"]
+  ] },
+  { day: "Sat", date: "9/19", classes: [
+    ["6:00 AM", "HYROX"], ["7:00 AM", "CrossFit"], ["8:00 AM", "CrossFit"], ["8:00 AM", "HYROX"],
+    ["9:00 AM", "CrossFit"], ["9:00 AM", "HYROX"], ["10:00 AM", "CrossFit"], ["11:15 AM", "Competitor"],
+    ["12:30 PM", "Kratos Oly Class"]
+  ] }
+];
+
+function feedback0913Out(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Every offered class as "Mon 9/14 9:00 AM HYROX", in schedule order.
+function feedback0913ClassLabels() {
+  var out = [];
+  FEEDBACK0913_SCHEDULE.forEach(function(d) {
+    d.classes.forEach(function(c) { out.push(d.day + " " + d.date + " " + c[0] + " " + c[1]); });
+  });
+  return out;
+}
+
+// Keep only classes we actually offered, in Mon→Sat / early→late order.
+function feedback0913NormalizeClasses(raw) {
+  var wanted = {};
+  String(raw || "").split(",").forEach(function(t) {
+    var k = t.trim().toLowerCase();
+    if (k) wanted[k] = true;
+  });
+  return feedback0913ClassLabels().filter(function(label) { return wanted[label.toLowerCase()]; });
+}
+
+function feedback0913ColLetter(idx0) {
+  var n = idx0 + 1, s = "";
+  while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
+function feedback0913HeaderMap(sheet) {
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var idx = {};
+  headers.forEach(function(h, i) { idx[String(h).trim().toLowerCase()] = i; });
+  return idx;
+}
+
+// Text columns must stay TEXT — Sheets would otherwise parse "9/14" or a
+// lone "Mon 9/14 5:30 AM CrossFit"-style answer into a date, and the COUNTIF
+// tally would silently miss it. Rating columns stay numeric on purpose.
+function feedback0913ApplyTextFormats(sheet) {
+  var hm = feedback0913HeaderMap(sheet);
+  var rows = Math.max(sheet.getMaxRows() - 1, 1);
+  ["name", "email", "free week?", "free week classes", "comments"].forEach(function(key) {
+    if (hm[key] != null) sheet.getRange(2, hm[key] + 1, rows, 1).setNumberFormat("@");
+  });
+}
+
+function getOrCreateFeedback0913Spreadsheet() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty("FEEDBACK0913_SHEET_ID");
+  if (id) {
+    try { return SpreadsheetApp.openById(id); } catch (e) { /* fall through and create */ }
+  }
+
+  var ss = SpreadsheetApp.create(FEEDBACK0913_SHEET_NAME);
+  var sheet = ss.getActiveSheet();
+  sheet.setName("Responses");
+  sheet.appendRow(FEEDBACK0913_HEADERS);
+  sheet.getRange(1, 1, 1, FEEDBACK0913_HEADERS.length)
+    .setFontWeight("bold")
+    .setBackground("#0a0a0a")
+    .setFontColor("#d6ff3f");
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidth(1, 160);   // Timestamp
+  sheet.setColumnWidth(2, 180);   // Name
+  sheet.setColumnWidth(3, 240);   // Email
+  for (var c = 4; c <= 8; c++) sheet.setColumnWidth(c, 120);  // ratings
+  sheet.setColumnWidth(9, 110);   // Free Week?
+  sheet.setColumnWidth(10, 520);  // Free Week Classes
+  sheet.setColumnWidth(11, 380);  // Comments
+  feedback0913ApplyTextFormats(sheet);
+
+  feedback0913BuildTallyTab(ss);
+
+  props.setProperty("FEEDBACK0913_SHEET_ID", ss.getId());
+  return ss;
+}
+
+// "Class Tally" tab: one row per offered class with a live COUNTIF of how
+// many responses picked it (wildcard match on the "Free Week Classes" text),
+// then a summary block (responses, Free Week yes/no, average ratings).
+// Formula-driven, so it stays live with no script involvement. Safe to
+// rebuild any time (?action=feedback0913RebuildTally).
+function feedback0913BuildTallyTab(ss) {
+  var resp = ss.getSheetByName("Responses") || ss.getSheets()[0];
+  var hm = feedback0913HeaderMap(resp);
+  function col(key, fallback) { return feedback0913ColLetter(hm[key] != null ? hm[key] : fallback); }
+  var cEmail = col("email", 2), cYes = col("free week?", 8), cClasses = col("free week classes", 9);
+
+  var tally = ss.getSheetByName("Class Tally") || ss.insertSheet("Class Tally");
+  tally.clear();
+
+  var rows = [["Day", "Date", "Time", "Class", "Picked"]];
+  var hyroxRows = [];
+  FEEDBACK0913_SCHEDULE.forEach(function(d) {
+    d.classes.forEach(function(c) {
+      var label = d.day + " " + d.date + " " + c[0] + " " + c[1];
+      if (c[1] === "HYROX") hyroxRows.push(rows.length + 1);
+      rows.push([d.day, d.date, c[0], c[1],
+        '=COUNTIF(Responses!$' + cClasses + '$2:$' + cClasses + ',"*' + label + '*")']);
+    });
+  });
+  var classRowCount = rows.length;  // header + one per class
+
+  // Summary block (labels in col A, values in col E — col A is text-formatted
+  // below, and a formula written into a text-formatted cell would be stored
+  // as a literal string, so the numbers must live in col E).
+  rows.push(["", "", "", "", ""]);
+  rows.push(["Responses", "", "", "", "=COUNTA(Responses!$" + cEmail + "$2:$" + cEmail + ")"]);
+  rows.push(["Free Week: Yes", "", "", "", '=COUNTIF(Responses!$' + cYes + '$2:$' + cYes + ',"Yes")']);
+  rows.push(["Free Week: No thanks", "", "", "", '=COUNTIF(Responses!$' + cYes + '$2:$' + cYes + ',"No thanks")']);
+  FEEDBACK0913_RATINGS.forEach(function(r) {
+    if (hm[r[1]] == null) return;
+    var cr = feedback0913ColLetter(hm[r[1]]);
+    rows.push(["Avg " + r[2] + " (1-5)", "", "", "",
+      '=IFERROR(ROUND(AVERAGE(Responses!$' + cr + '$2:$' + cr + '),2),"")']);
+  });
+
+  // Force Day/Date/Time/Class to TEXT before writing — Sheets would otherwise
+  // coerce "9/14" into a date and "5:30 AM" into a time-of-day value.
+  tally.getRange(2, 1, rows.length - 1, 4).setNumberFormat("@");
+  tally.getRange(1, 1, rows.length, 5).setValues(rows);
+  tally.getRange(1, 1, 1, 5)
+    .setFontWeight("bold").setBackground("#0a0a0a").setFontColor("#d6ff3f");
+  hyroxRows.forEach(function(r) {
+    tally.getRange(r, 1, 1, 5).setFontWeight("bold").setBackground("#f4ffcc");
+  });
+  tally.getRange(classRowCount + 2, 1, rows.length - classRowCount - 1, 5).setFontWeight("bold");
+  tally.setFrozenRows(1);
+  tally.setColumnWidth(1, 60);
+  tally.setColumnWidth(2, 60);
+  tally.setColumnWidth(3, 90);
+  tally.setColumnWidth(4, 170);
+  tally.setColumnWidth(5, 80);
+  return tally;
+}
+
+// One past the last row with a real timestamp (NOT appendRow — a stray cell
+// far down the sheet would otherwise maroon every new response there).
+function feedback0913NextRow(sheet, hm) {
+  var col = hm["timestamp"] != null ? hm["timestamp"] : 0;
+  var last = sheet.getLastRow();
+  if (last < 2) return 2;
+  var vals = sheet.getRange(2, col + 1, last - 1, 1).getValues();
+  for (var i = vals.length - 1; i >= 0; i--) {
+    if (String(vals[i][0]).trim() !== "") return i + 3;
+  }
+  return 2;
+}
+
+function feedback0913FindRowByEmail(sheet, hm, email) {
+  var col = hm["email"];
+  if (col == null) return 0;
+  var last = sheet.getLastRow();
+  if (last < 2) return 0;
+  var vals = sheet.getRange(2, col + 1, last - 1, 1).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]).trim().toLowerCase() === email) return i + 2;
+  }
+  return 0;
+}
+
+function handleFeedback0913(data) {
+  var name = String(data.name || "").trim();
+  var email = String(data.email || "").trim().toLowerCase();
+
+  if (!name) return feedback0913Out({ status: "error", saved: false, error: "Name is required." });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return feedback0913Out({ status: "error", saved: false, error: "A valid email is required." });
+  }
+
+  var fw = String(data.freeWeek || "").trim();
+  var freeWeek = /^yes$/i.test(fw) ? "Yes" : (/^no/i.test(fw) ? "No thanks" : "");
+  var classes = freeWeek === "Yes" ? feedback0913NormalizeClasses(data.freeWeekClasses) : [];
+  var classesText = classes.join(", ");
+  var comments = String(data.comments || "").trim();
+
+  // Ratings are stored as numbers (1–5) so the Tally averages work; anything
+  // else (blank, out of range) is stored as an empty cell.
+  var ratings = {};
+  FEEDBACK0913_RATINGS.forEach(function(r) {
+    var n = parseInt(data[r[0]], 10);
+    ratings[r[1]] = (n >= 1 && n <= 5) ? n : "";
+  });
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  var ss, rowNum, updated = false;
+  try {
+    ss = getOrCreateFeedback0913Spreadsheet();
+    var sheet = ss.getSheetByName("Responses") || ss.getSheets()[0];
+    var hm = feedback0913HeaderMap(sheet);
+
+    rowNum = feedback0913FindRowByEmail(sheet, hm, email);
+    if (rowNum) updated = true; else rowNum = feedback0913NextRow(sheet, hm);
+
+    // Write only the columns we own (by header name), so any extra columns
+    // Kevin adds to the sheet are never clobbered on an update.
+    var values = {
+      "timestamp": new Date(),
+      "name": name,
+      "email": email,
+      "free week?": freeWeek,
+      "free week classes": classesText,
+      "comments": comments
+    };
+    Object.keys(ratings).forEach(function(k) { values[k] = ratings[k]; });
+    var textKeys = { "name": 1, "email": 1, "free week?": 1, "free week classes": 1, "comments": 1 };
+    Object.keys(values).forEach(function(key) {
+      if (hm[key] == null) return;
+      var cell = sheet.getRange(rowNum, hm[key] + 1);
+      if (textKeys[key]) cell.setNumberFormat("@");
+      cell.setValue(values[key]);
+    });
+  } finally {
+    lock.releaseLock();
+  }
+
+  if (NOTIFY_EMAIL && !/test/i.test(name) && !/test/i.test(email)) {
+    try {
+      var wantsFreeWeek = freeWeek === "Yes";
+      var ratingRows = "";
+      FEEDBACK0913_RATINGS.forEach(function(r) {
+        ratingRows += row(r[2], ratings[r[1]] === "" ? "—" : String(ratings[r[1]]));
+      });
+      MailApp.sendEmail({
+        to: NOTIFY_EMAIL,
+        subject: (wantsFreeWeek ? "[FREE WEEK] " : "") + "Hyrox Sim feedback — " + name +
+                 (updated ? " (updated answer)" : ""),
+        htmlBody:
+          "<h3>Sept 13 Hyrox Simulation feedback" + (updated ? " (updated)" : "") + "</h3>" +
+          "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
+          row("Name", name) +
+          row("Email", email) +
+          ratingRows +
+          row("Free Week?", freeWeek || "—") +
+          (classesText ? row("Classes", classes.join("<br>").replace(/&/g, "&amp;")) : "") +
+          (comments ? row("Comments", comments) : "") +
+          "</table>" +
+          "<p><a href='" + ss.getUrl() + "'>Open the feedback sheet</a> — the Class Tally tab has live counts per class.</p>"
+      });
+    } catch (mailErr) {
+      Logger.log("Feedback0913 email notification failed: " + mailErr);
+    }
+  }
+
+  return feedback0913Out({
+    status: "ok", saved: true, row: rowNum, updated: updated,
+    freeWeek: freeWeek, classes: classesText
+  });
+}
+
+// ?action=feedback0913Info — sheet URL, response counts, per-class picks and
+// average ratings, with test rows (/test/i in name or email) excluded.
+function feedback0913Summary() {
+  var ss = getOrCreateFeedback0913Spreadsheet();
+  var sheet = ss.getSheetByName("Responses") || ss.getSheets()[0];
+  var hm = feedback0913HeaderMap(sheet);
+  var last = sheet.getLastRow();
+  var rows = last >= 2 ? sheet.getRange(2, 1, last - 1, sheet.getLastColumn()).getValues() : [];
+  var iName = hm["name"], iEmail = hm["email"], iYes = hm["free week?"], iClasses = hm["free week classes"], iTs = hm["timestamp"];
+
+  var n = 0, yes = 0, no = 0, testRows = 0, latest = null;
+  var counts = {}, sums = {}, nums = {};
+  FEEDBACK0913_RATINGS.forEach(function(r) { sums[r[2]] = 0; nums[r[2]] = 0; });
+
+  rows.forEach(function(r) {
+    var nm = String(iName != null ? r[iName] : ""), em = String(iEmail != null ? r[iEmail] : "");
+    if (!nm.trim() && !em.trim()) return;
+    if (/test/i.test(nm) || /test/i.test(em)) { testRows++; return; }
+    n++;
+    var fw = String(iYes != null ? r[iYes] : "");
+    if (fw === "Yes") yes++; else if (fw === "No thanks") no++;
+    String(iClasses != null ? r[iClasses] : "").split(",").forEach(function(c) {
+      var k = c.trim(); if (k) counts[k] = (counts[k] || 0) + 1;
+    });
+    FEEDBACK0913_RATINGS.forEach(function(rt) {
+      var v = hm[rt[1]] != null ? Number(r[hm[rt[1]]]) : NaN;
+      if (v >= 1 && v <= 5) { sums[rt[2]] += v; nums[rt[2]]++; }
+    });
+    var ts = iTs != null ? r[iTs] : null;
+    if (ts instanceof Date && (!latest || ts > latest)) latest = ts;
+  });
+
+  var avg = {};
+  FEEDBACK0913_RATINGS.forEach(function(r) { avg[r[2]] = nums[r[2]] ? Math.round(sums[r[2]] / nums[r[2]] * 100) / 100 : null; });
+  var classList = feedback0913ClassLabels()
+    .filter(function(l) { return counts[l]; })
+    .map(function(l) { return { "class": l, picked: counts[l] }; });
+
+  return {
+    status: "ok", name: ss.getName(), url: ss.getUrl(),
+    responses: n, freeWeekYes: yes, freeWeekNo: no, testRowsExcluded: testRows,
+    latest: latest ? latest.toISOString() : null,
+    avg: avg, classes: classList
+  };
+}
+
+// ?action=feedback0913ClearTests — deletes rows whose name/email matches /test/i.
+function feedback0913ClearTests() {
+  var ss = getOrCreateFeedback0913Spreadsheet();
+  var sheet = ss.getSheetByName("Responses") || ss.getSheets()[0];
+  var hm = feedback0913HeaderMap(sheet);
+  var iName = hm["name"], iEmail = hm["email"];
+  var last = sheet.getLastRow();
+  var removed = [];
+  if (last >= 2) {
+    var vals = sheet.getRange(2, 1, last - 1, sheet.getLastColumn()).getValues();
+    for (var i = vals.length - 1; i >= 0; i--) {
+      var nm = String(iName != null ? vals[i][iName] : "");
+      var em = String(iEmail != null ? vals[i][iEmail] : "");
+      if (/test/i.test(nm) || /test/i.test(em)) {
+        sheet.deleteRow(i + 2);
+        removed.push({ row: i + 2, name: nm.trim(), email: em.trim() });
+      }
+    }
+  }
+  return { status: "ok", removed: removed.length, rows: removed.reverse() };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1878,6 +2285,33 @@ function doGet(e) {
     survey0913ApplyTextFormats(ssRT.getSheetByName("Responses") || ssRT.getSheets()[0]);
     survey0913BuildTallyTab(ssRT);
     return survey0913Out({ status: "ok", rebuilt: "Tally" });
+  }
+  // Read back the computed Class Tally (formula results), e.g. to verify the
+  // sheet after a deploy: classes with >0 picks plus the summary block.
+  if (action === "feedback0913Tally") {
+    var ssTy = getOrCreateFeedback0913Spreadsheet();
+    var tTy = ssTy.getSheetByName("Class Tally");
+    if (!tTy) return feedback0913Out({ status: "error", error: "no Class Tally tab" });
+    var valsTy = tTy.getDataRange().getValues();
+    var pickedTy = [], summaryTy = [];
+    valsTy.slice(1).forEach(function(r) {
+      var isClass = r[3] !== "" && r[3] != null;
+      if (isClass && Number(r[4]) > 0) pickedTy.push({ "class": r[0] + " " + r[1] + " " + r[2] + " " + r[3], picked: Number(r[4]) });
+      if (!isClass && r[0] !== "" && r[0] != null) summaryTy.push({ label: String(r[0]), value: r[4] });
+    });
+    return feedback0913Out({ status: "ok", rows: valsTy.length - 1, picked: pickedTy, summary: summaryTy });
+  }
+  if (action === "feedback0913Info") {
+    return feedback0913Out(feedback0913Summary());
+  }
+  if (action === "feedback0913ClearTests") {
+    return feedback0913Out(feedback0913ClearTests());
+  }
+  if (action === "feedback0913RebuildTally") {
+    var ssFB = getOrCreateFeedback0913Spreadsheet();
+    feedback0913ApplyTextFormats(ssFB.getSheetByName("Responses") || ssFB.getSheets()[0]);
+    feedback0913BuildTallyTab(ssFB);
+    return feedback0913Out({ status: "ok", rebuilt: "Class Tally" });
   }
   if (action === "sim0913Info") {
     var ss0913 = getOrCreateSim0913Spreadsheet();
