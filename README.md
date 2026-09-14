@@ -138,7 +138,7 @@ Each non-test response also emails `NOTIFY_EMAIL`; the subject starts with **[FR
 | Likelihood to do another | 1–5 |
 | Energy / atmosphere (music, cheering, judges) | 1–5 |
 | **Free Week at Koda 9/14–9/19** — "Would you like to come to any classes this week?" | Yes / No thanks |
-| Which classes do you want to try? | checkbox pills, shown only on **Yes**; one per class on the Mon 9/14 – Sat 9/19 schedule (HYROX highlighted in yellow, everything else muted); at least one required when Yes |
+| Which classes do you want to try? | shown only on **Yes**: three checkbox grids with the days (Mon 9/14 – Sat 9/19) across the top and class times down the side — a highlighted yellow **HYROX** grid, a **CrossFit** grid, and a quieter **Other classes** grid (KodaFit, Women's Strength, Competitor, Kratos Oly, Kids 8-10; rows there are time + program); at least one class required when Yes |
 | Comments | optional text |
 
 The class list lives in **two places that must match**: `SCHEDULE` in `feedback.html` and `FEEDBACK0913_SCHEDULE` in `apps-script/Code.js` (the backend drops any class it doesn't recognize, and the tally is built from the backend list). It was pulled from https://www.kodacrossfitironview.com/Schedule on 9/13/2026 (Mon–Sat; Sunday isn't part of Free Week). To change it, edit both, then `clasp push` + `clasp redeploy` (below) and hit `?action=feedback0913RebuildTally` once.

@@ -292,146 +292,167 @@
       margin-bottom: 12px;
     }
 
-    .picker-legend {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 6px 10px;
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .legend-pill {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--accent);
-      color: var(--accent);
-      font-family: 'Bebas Neue', sans-serif;
-      letter-spacing: 0.08em;
-      font-size: 0.9rem;
-    }
-    .legend-pill.other {
-      border-color: #3a3a3a;
-      color: #bdbdbd;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.74rem;
-      letter-spacing: 0.02em;
-      padding: 4px 10px;
-    }
-
-    .day {
-      padding: 16px 0 8px;
-      border-top: 1px solid var(--border);
-    }
-    .day:first-child { border-top: none; }
-    .day-head {
+    /* One grid per program group: days across the top, class times down the side */
+    .grid-section { margin-top: 22px; }
+    .grid-title {
       display: flex;
       align-items: baseline;
       gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 2px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.1em;
+      line-height: 1;
+      color: #fff;
+    }
+    .grid-title .count {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.02em;
+      color: var(--muted);
+    }
+    .grid-sub {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
       margin-bottom: 10px;
     }
-    .day-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.4rem;
-      letter-spacing: 0.08em;
-      color: #fff;
+
+    .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    table.class-grid {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+      min-width: 296px;
     }
-    .day-date {
+    table.class-grid th,
+    table.class-grid td { text-align: center; padding: 3px 2px; vertical-align: middle; }
+    table.class-grid thead th {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       letter-spacing: 0.06em;
+      line-height: 1.05;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+    table.class-grid thead th .dt {
+      display: block;
+      margin-top: 2px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
       color: var(--muted);
     }
-
-    .prog-row {
-      display: grid;
-      grid-template-columns: 118px 1fr;
-      gap: 6px 10px;
-      align-items: start;
-      margin-bottom: 8px;
-    }
-    .prog-label {
-      font-size: 0.72rem;
+    table.class-grid th.time-head,
+    table.class-grid td.time-cell { text-align: left; width: 70px; }
+    table.class-grid td.time-cell {
       font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--muted);
-      padding-top: 7px;
-      line-height: 1.25;
+      font-size: 0.82rem;
+      color: var(--text);
+      white-space: nowrap;
+      line-height: 1.15;
+      padding-right: 6px;
     }
-    .prog-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+    table.class-grid td.time-cell .prog {
+      display: block;
+      font-weight: 500;
+      font-size: 0.64rem;
+      color: var(--muted);
+      white-space: normal;
+    }
+    table.class-grid tbody tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    table.class-grid td.empty::after {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #2e2e2e;
+    }
 
-    /* One tappable pill per class */
-    .pick { position: relative; cursor: pointer; }
-    .pick input { position: absolute; opacity: 0; pointer-events: none; }
-    .pick .pill {
+    /* Tappable cell — the whole cell toggles its checkbox */
+    .cell-check {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 0;
+      cursor: pointer;
+    }
+    .cell-check input { position: absolute; opacity: 0; pointer-events: none; }
+    .cell-check .box {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      padding: 6px 11px;
-      border: 1px solid #333;
-      border-radius: 999px;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border: 1px solid #3a3a3a;
+      border-radius: 7px;
       background: var(--panel);
-      color: #bdbdbd;
-      font-size: 0.82rem;
-      font-weight: 500;
-      white-space: nowrap;
       transition: all 0.12s ease;
     }
-    .pick .pill::before {
+    .cell-check .box::after {
       content: '';
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      border: 1px solid #555;
-      background: transparent;
-      transition: all 0.12s ease;
+      width: 11px;
+      height: 6px;
+      border-left: 2.5px solid #000;
+      border-bottom: 2.5px solid #000;
+      transform: rotate(-45deg) scale(0);
+      margin-top: -3px;
+      transition: transform 0.12s ease;
     }
-    .pick:hover .pill { border-color: #666; color: #fff; }
-    .pick input:checked + .pill {
-      background: rgba(255,255,255,0.14);
-      border-color: #fff;
-      color: #fff;
-      font-weight: 600;
-    }
-    .pick input:checked + .pill::before { background: #fff; border-color: #fff; }
-    .pick input:focus-visible + .pill { box-shadow: 0 0 0 3px rgba(255,255,255,0.25); }
+    .cell-check:hover .box { border-color: #666; }
+    .cell-check input:checked + .box { background: #fff; border-color: #fff; }
+    .cell-check input:checked + .box::after { transform: rotate(-45deg) scale(1); }
+    .cell-check input:focus-visible + .box { box-shadow: 0 0 0 3px rgba(255,255,255,0.25); }
 
-    /* HYROX row — the loud one */
-    .prog-row.hyrox {
-      margin: 0 -10px 12px;
-      padding: 10px 10px 8px;
+    /* HYROX grid — the loud one */
+    .grid-section.hyrox {
+      margin: 4px -6px 0;
+      padding: 14px 10px 8px;
       background: rgba(214,255,63,0.06);
-      border: 1px solid rgba(214,255,63,0.25);
-      border-radius: 10px;
+      border: 1px solid rgba(214,255,63,0.45);
+      border-radius: 12px;
+      box-shadow: 0 0 24px rgba(214,255,63,0.08);
     }
-    .prog-row.hyrox .prog-label {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.3rem;
-      letter-spacing: 0.1em;
+    .grid-section.hyrox .grid-title { color: var(--accent); font-size: 1.9rem; }
+    .grid-section.hyrox table.class-grid thead th { color: var(--accent); border-bottom-color: rgba(214,255,63,0.35); }
+    .grid-section.hyrox td.time-cell {
       color: var(--accent);
-      text-transform: none;
-      padding-top: 5px;
+      font-family: 'Bebas Neue', sans-serif;
       font-weight: 400;
+      font-size: 1.1rem;
+      letter-spacing: 0.04em;
     }
-    .prog-row.hyrox .pill {
+    .grid-section.hyrox .cell-check .box {
+      width: 34px;
+      height: 34px;
       border-color: var(--accent);
-      color: var(--accent);
-      background: rgba(214,255,63,0.08);
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.08rem;
-      letter-spacing: 0.06em;
-      padding: 7px 14px;
+      background: rgba(214,255,63,0.10);
     }
-    .prog-row.hyrox .pill::before { border-color: var(--accent); }
-    .prog-row.hyrox input:checked + .pill {
+    .grid-section.hyrox .cell-check input:checked + .box {
       background: var(--accent);
-      color: #000;
-      box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(214,255,63,0.35);
+      border-color: var(--accent);
+      box-shadow: 0 0 14px rgba(214,255,63,0.45);
     }
-    .prog-row.hyrox input:checked + .pill::before { background: #000; border-color: #000; }
-    .prog-row.hyrox input:focus-visible + .pill { box-shadow: 0 0 0 3px rgba(214,255,63,0.30); }
+    .grid-section.hyrox .cell-check input:focus-visible + .box { box-shadow: 0 0 0 3px rgba(214,255,63,0.30); }
+    .grid-section.hyrox td.empty::after { background: rgba(214,255,63,0.18); }
+
+    /* Other classes — quieter */
+    .grid-section.other {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .grid-section.other .grid-title { color: #cfcfcf; font-size: 1.25rem; }
+    .grid-section.other td.time-cell { color: #cfcfcf; }
+    .grid-section.other .cell-check .box { width: 26px; height: 26px; border-color: #333; }
+    .grid-section.other .cell-check input:checked + .box { background: #bdbdbd; border-color: #bdbdbd; }
 
     .picker-foot {
       display: flex;
@@ -626,11 +647,18 @@
       .container { padding: 26px 14px 48px; }
       form { padding: 22px 16px; }
       .rating-cell .cell-inner { font-size: 1.25rem; padding: 13px 0; }
-      .conditional { padding: 16px 12px 8px; }
-      .prog-row { grid-template-columns: 1fr; gap: 4px; }
-      .prog-label { padding-top: 0; }
-      .prog-row.hyrox { margin-left: -6px; margin-right: -6px; }
-      .prog-row.hyrox .prog-label { padding-top: 0; }
+      .conditional { padding: 14px 8px 8px; }
+      table.class-grid { min-width: 264px; }   /* 7 columns fit a 360px+ phone without sideways scroll */
+      table.class-grid th, table.class-grid td { padding: 3px 1px; }
+      table.class-grid th.time-head,
+      table.class-grid td.time-cell { width: 58px; }
+      table.class-grid td.time-cell { font-size: 0.74rem; padding-right: 4px; }
+      table.class-grid thead th { font-size: 0.95rem; }
+      .cell-check .box { width: 28px; height: 28px; }
+      .grid-section.hyrox { margin-left: -4px; margin-right: -4px; padding: 12px 6px 6px; }
+      .grid-section.hyrox td.time-cell { font-size: 0.95rem; }
+      .grid-section.hyrox .cell-check .box { width: 30px; height: 30px; }
+      .grid-section.other .cell-check .box { width: 24px; height: 24px; }
     }
   </style>
 </head>
@@ -731,12 +759,8 @@
 
         <div class="conditional" id="classPicker">
           <span class="cond-label">Which classes do you want to try?</span>
-          <span class="cond-hint">Check every class you'd like to come to — as many as you want.</span>
-          <div class="picker-legend">
-            <span class="legend-pill">HYROX</span><span>our Hyrox classes</span>
-            <span class="legend-pill other">CrossFit · KodaFit · Women's Strength · more</span><span>also free all week</span>
-          </div>
-          <div id="dayList"><!-- days + classes injected by JS --></div>
+          <span class="cond-hint">Days run across the top, class times down the side. Check every class you'd like to come to — as many as you want.</span>
+          <div id="gridSections"><!-- HYROX / CrossFit / Other grids injected by JS --></div>
           <div class="picker-foot">
             <span id="pickCount">0 classes selected</span>
             <button type="button" id="clearPicks">Clear all</button>
@@ -855,34 +879,72 @@
       }
     });
 
-    // ── Build the Free Week class picker (one block per day, HYROX row first) ──
-    var dayList = document.getElementById('dayList');
-    SCHEDULE.forEach(function(d) {
-      var byProg = {};
-      d.classes.forEach(function(c) { (byProg[c[1]] = byProg[c[1]] || []).push(c); });
-      var progs = PROGRAM_ORDER.filter(function(p) { return byProg[p]; });
-      Object.keys(byProg).forEach(function(p) { if (progs.indexOf(p) === -1) progs.push(p); });
+    // ── Build the Free Week class picker: one grid per program group, with the
+    //    days across the top and class times down the side. HYROX gets its own
+    //    highlighted grid, CrossFit its own, and everything else shares a
+    //    quieter third grid (rows there are time + program).
+    var SHORT_PROG = { "Kratos Oly Class": "Kratos Oly", "Kids (8-10)": "Kids 8-10" };
+    var SECTIONS = [
+      { key: 'hyrox',    title: 'HYROX',         sub: 'Tap every Hyrox class you want to come to.',
+        match: function(p) { return p === 'HYROX'; } },
+      { key: 'crossfit', title: 'CROSSFIT',      sub: 'Our all-levels, coach-led group class.',
+        match: function(p) { return p === 'CrossFit'; } },
+      { key: 'other',    title: 'OTHER CLASSES', sub: 'KodaFit · Women\'s Strength · Competitor · Kratos Oly · Kids (8-10) — also free this week.',
+        match: function(p) { return p !== 'HYROX' && p !== 'CrossFit'; }, showProg: true }
+    ];
 
-      var html = '<div class="day-head"><span class="day-name">' + esc(d.name.toUpperCase()) + '</span>' +
-                 '<span class="day-date">' + esc(d.date) + '</span></div>';
-      progs.forEach(function(p) {
-        var isHyrox = p === 'HYROX';
-        html += '<div class="prog-row' + (isHyrox ? ' hyrox' : '') + '">' +
-                '<div class="prog-label">' + esc(p) + '</div><div class="prog-pills">';
-        byProg[p].forEach(function(c) {
-          var label = classLabel(d, c);
-          html += '<label class="pick">' +
-                  '<input type="checkbox" name="freeWeekClass" value="' + esc(label) + '" aria-label="' + esc(label) + '">' +
-                  '<span class="pill">' + esc(c[0]) + '</span></label>';
+    function timeKey(t) {   // "5:30 AM" -> minutes since midnight, for row order
+      var m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(t);
+      if (!m) return 0;
+      return ((parseInt(m[1], 10) % 12) + (m[3] === 'PM' ? 12 : 0)) * 60 + parseInt(m[2], 10);
+    }
+
+    function buildGrid(section) {
+      var rows = {}, order = [];
+      SCHEDULE.forEach(function(d, di) {
+        d.classes.forEach(function(c) {
+          if (!section.match(c[1])) return;
+          var key = section.showProg ? c[0] + '|' + c[1] : c[0];
+          if (!rows[key]) { rows[key] = { time: c[0], prog: c[1], days: {} }; order.push(key); }
+          rows[key].days[di] = classLabel(d, c);
         });
-        html += '</div></div>';
       });
+      order.sort(function(a, b) {
+        var ra = rows[a], rb = rows[b];
+        return (timeKey(ra.time) - timeKey(rb.time)) ||
+               (PROGRAM_ORDER.indexOf(ra.prog) - PROGRAM_ORDER.indexOf(rb.prog));
+      });
+      if (!order.length) return '';
 
-      var block = document.createElement('div');
-      block.className = 'day';
-      block.innerHTML = html;
-      dayList.appendChild(block);
-    });
+      var html = '<div class="grid-section ' + section.key + '" data-section="' + section.key + '">' +
+        '<div class="grid-title">' + esc(section.title) + '<span class="count"></span></div>' +
+        '<span class="grid-sub">' + esc(section.sub) + '</span>' +
+        '<div class="grid-scroll"><table class="class-grid"><thead><tr><th class="time-head">Time</th>';
+      SCHEDULE.forEach(function(d) {
+        html += '<th>' + esc(d.day.toUpperCase()) + '<span class="dt">' + esc(d.date) + '</span></th>';
+      });
+      html += '</tr></thead><tbody>';
+      order.forEach(function(key) {
+        var r = rows[key];
+        html += '<tr><td class="time-cell">' + esc(r.time) +
+                (section.showProg ? '<span class="prog">' + esc(SHORT_PROG[r.prog] || r.prog) + '</span>' : '') +
+                '</td>';
+        SCHEDULE.forEach(function(d, di) {
+          var label = r.days[di];
+          html += label
+            ? '<td><label class="cell-check">' +
+              '<input type="checkbox" name="freeWeekClass" value="' + esc(label) + '" aria-label="' + esc(label) + '">' +
+              '<span class="box"></span></label></td>'
+            : '<td class="empty"></td>';
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+      return html;
+    }
+
+    var gridSections = document.getElementById('gridSections');
+    gridSections.innerHTML = SECTIONS.map(buildGrid).join('');
 
     var pickCount = document.getElementById('pickCount');
     function selectedClasses() {
@@ -893,8 +955,12 @@
     function updateCount() {
       var n = selectedClasses().length;
       pickCount.textContent = n + (n === 1 ? ' class selected' : ' classes selected');
+      gridSections.querySelectorAll('.grid-section').forEach(function(sec) {
+        var k = sec.querySelectorAll('input[name="freeWeekClass"]:checked').length;
+        sec.querySelector('.count').textContent = k ? k + ' picked' : '';
+      });
     }
-    dayList.addEventListener('change', updateCount);
+    gridSections.addEventListener('change', updateCount);
     document.getElementById('clearPicks').addEventListener('click', function() {
       document.querySelectorAll('input[name="freeWeekClass"]').forEach(function(c) { c.checked = false; });
       updateCount();
