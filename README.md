@@ -125,7 +125,7 @@ The page posts to the **same** web app as signups (`apps-script/Code.js`) with `
 - `Responses` — one row per person. **One row per email**: resubmitting overwrites that person's earlier answer, so submit-retries can't create duplicates.
 - `Class Tally` — one row per offered class with a live count of how many people picked it (HYROX rows shaded), plus a summary block (responses, Free Week yes/no, average ratings). Formula-driven, so it updates itself.
 
-Each non-test response also emails `NOTIFY_EMAIL`; the subject starts with **[FREE WEEK]** when the person said yes, and the classes they picked are listed in the body.
+Emails go to `NOTIFY_EMAIL` **only for Free Week class reservations** (Kevin 9/14) — feedback-only responses just land in the sheet. Subject `[FREE WEEK] Name reserved N classes` with the classes listed one per line, plus their ratings/comments. A resubmit that drops reservations the person had made earlier also emails (`[FREE WEEK] Name dropped their class reservations`) so the coaches' headcount stays honest. Rows whose name/email matches /test/i never email.
 
 ### Questions collected
 

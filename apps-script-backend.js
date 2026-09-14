@@ -721,6 +721,13 @@ function handleFeedback0913(data) {
     rowNum = feedback0913FindRowByEmail(sheet, hm, email);
     if (rowNum) updated = true; else rowNum = feedback0913NextRow(sheet, hm);
 
+    // On a resubmit, remember what they had reserved before we overwrite it,
+    // so a dropped reservation can still be reported (see email below).
+    var prevClassesText = "";
+    if (updated && hm["free week classes"] != null) {
+      prevClassesText = String(sheet.getRange(rowNum, hm["free week classes"] + 1).getValue() || "").trim();
+    }
+
     // Write only the columns we own (by header name), so any extra columns
     // Kevin adds to the sheet are never clobbered on an update.
     var values = {
@@ -743,28 +750,44 @@ function handleFeedback0913(data) {
     lock.releaseLock();
   }
 
-  if (NOTIFY_EMAIL && !/test/i.test(name) && !/test/i.test(email)) {
+  // Kevin 9/14: email ONLY about Free Week class reservations — feedback-only
+  // responses just land in the sheet. Two cases: (a) this response reserves
+  // classes; (b) a resubmit that DROPS reservations the person had before, so
+  // the coaches' headcount doesn't silently include someone who backed out.
+  var reserved = classes.length > 0;
+  var droppedReservation = updated && !reserved && prevClassesText !== "";
+  if (NOTIFY_EMAIL && (reserved || droppedReservation) && !/test/i.test(name) && !/test/i.test(email)) {
     try {
-      var wantsFreeWeek = freeWeek === "Yes";
+      // Multi-line cell (one class per line) — row() escapes its value, so it
+      // can't carry <br> tags; build this cell with the same styling instead.
+      var listRow = function(label, items) {
+        return "<tr><td style='padding:4px 12px 4px 0;color:#666;text-transform:uppercase;font-size:11px;letter-spacing:0.05em;vertical-align:top'>" +
+          label + "</td><td style='padding:4px 0'>" + items.map(escapeHtml).join("<br>") + "</td></tr>";
+      };
       var ratingRows = "";
       FEEDBACK0913_RATINGS.forEach(function(r) {
-        ratingRows += row(r[2], ratings[r[1]] === "" ? "—" : String(ratings[r[1]]));
+        if (ratings[r[1]] !== "") ratingRows += row(r[2], String(ratings[r[1]]) + " / 5");
       });
+      var subject = reserved
+        ? "[FREE WEEK] " + name + " reserved " + classes.length + (classes.length === 1 ? " class" : " classes") +
+          (updated ? " (updated)" : "")
+        : "[FREE WEEK] " + name + " dropped their class reservations";
       MailApp.sendEmail({
         to: NOTIFY_EMAIL,
-        subject: (wantsFreeWeek ? "[FREE WEEK] " : "") + "Hyrox Sim feedback — " + name +
-                 (updated ? " (updated answer)" : ""),
+        subject: subject,
         htmlBody:
-          "<h3>Sept 13 Hyrox Simulation feedback" + (updated ? " (updated)" : "") + "</h3>" +
+          "<h3>" + escapeHtml(subject.replace("[FREE WEEK] ", "")) + "</h3>" +
           "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px'>" +
           row("Name", name) +
           row("Email", email) +
+          (reserved
+            ? listRow("Classes", classes)
+            : listRow("Previously", prevClassesText.split(",").map(function(s) { return s.trim(); }).filter(Boolean)) +
+              row("Now", freeWeek || "—")) +
           ratingRows +
-          row("Free Week?", freeWeek || "—") +
-          (classesText ? row("Classes", classes.join("<br>").replace(/&/g, "&amp;")) : "") +
           (comments ? row("Comments", comments) : "") +
           "</table>" +
-          "<p><a href='" + ss.getUrl() + "'>Open the feedback sheet</a> — the Class Tally tab has live counts per class.</p>"
+          "<p><a href='" + ss.getUrl() + "'>Open the feedback sheet</a> — the Class Tally tab has the live headcount per class.</p>"
       });
     } catch (mailErr) {
       Logger.log("Feedback0913 email notification failed: " + mailErr);
